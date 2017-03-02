@@ -1,0 +1,39 @@
+<resources>
+    <string name="app_name">EspBlufi</string>
+
+    <string name="connect_menu_settings">About</string>
+
+    <string name="bt_disable_msg">Bluetooth is disable</string>
+    <string name="location_disable_msg">Location is disable</string>
+    <string name="wifi_disable_msg">Wifi is disable</string>
+    <string name="wifi_no_selected_msg">No wifi has selected</string>
+
+    <string name="neg_sec_title">Prepare</string>
+    <string name="neg_sec_configure">Configure</string>
+    <string name="neg_sec_deauthenticate">Deauthenticate</string>
+
+    <string name="configure_title">Configure</string>
+    <string name="configure_scan">Scan</string>
+    <string name="configure_sel_device_mode">Select device mode</string>
+    <string name="configure_softap_security">SoftAP Security</string>
+    <string name="configure_softap_ssid">SoftAP ssid</string>
+    <string name="configure_softap_password">SoftAP password</string>
+    <string name="configure_softap_password_error">SoftAP password is too short</string>
+    <string name="configure_softap_channel">SoftAP channel</string>
+    <string name="configure_softap_max_connection">SoftAP max connection</string>
+    <string name="configure_station_sel_wifi">Select Wifi</string>
+    <string name="configure_station_ssid">Wifi ssid</string>
+    <string name="configure_station_ssid_error">Wifi ssid can\'t be empty</string>
+    <string name="configure_station_password">Wifi password</string>
+    <string name="configure_station_wifi_scanning">Scanning wifi…</string>
+    <string name="configure_station_wifi_scanning_nothing">Found no WIFI</string>
+
+    <string name="deauthenticate_title">Deauthenticate</string>
+    <string name="deauthenticate_menu_item">Deauthenticate</string>
+
+    <string name="settings_title">About</string>
+    <string name="settings_version_key">settings_key_version</string>
+    <string name="settings_version_title">APP Version</string>
+    <string name="settings_support_protocol_key">settings_key_support_protocol</string>
+    <string name="settings_support_protocol_title">Support protocol version</string>
+</resources>

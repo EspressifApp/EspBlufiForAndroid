@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+    <Preference
+        android:key="@string/settings_version_key"
+        android:title="@string/settings_version_title" />
+    <Preference
+        android:key="@string/settings_support_protocol_key"
+        android:title="@string/settings_support_protocol_title" />
+</PreferenceScreen>
