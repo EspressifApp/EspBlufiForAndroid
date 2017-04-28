@@ -10,13 +10,14 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <application
+        android:name=".app.BlufiApp"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".BlufiConnectActivity"
+            android:name=".ui.BlufiMainActivity"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,19 +26,23 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".BlufiNegSecActivity"
+            android:name=".ui.BlufiNegSecActivity"
             android:label="@string/neg_sec_title"
             android:screenOrientation="portrait" />
         <activity
-            android:name=".BlufiConfigureActivity"
+            android:name=".ui.BlufiConfigureActivity"
             android:label="@string/configure_title"
             android:screenOrientation="portrait" />
         <activity
-            android:name=".BlufiDeauthenticateActivity"
+            android:name=".ui.BlufiBatchConfigureActivity"
+            android:label="@string/batch_configure_title"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".ui.BlufiDeauthenticateActivity"
             android:label="@string/deauthenticate_title"
             android:screenOrientation="portrait" />
         <activity
-            android:name=".BlufiSettingsActivity"
+            android:name=".ui.BlufiSettingsActivity"
             android:label="@string/settings_title"
             android:screenOrientation="portrait" />
     </application>

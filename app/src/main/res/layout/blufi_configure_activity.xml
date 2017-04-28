@@ -10,7 +10,7 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="com.espressif.espblufi.BlufiConnectActivity">
+    tools:context="com.espressif.espblufi.ui.BlufiMainActivity">
 
     <ProgressBar
         android:id="@+id/progress"

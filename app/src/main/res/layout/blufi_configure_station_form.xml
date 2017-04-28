@@ -8,6 +8,24 @@
     android:orientation="vertical"
     android:visibility="gone">
 
+    <LinearLayout
+        android:id="@+id/station_mesh_id_form"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="15dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/configure_station_mesh_id" />
+
+        <Spinner
+            android:id="@+id/station_mesh_id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

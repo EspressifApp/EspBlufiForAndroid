@@ -1,30 +1,38 @@
-package com.espressif.espblufi;
+package com.espressif.espblufi.ui;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
-import com.espressif.espblufi.communication.BlufiCommunicator;
-import com.espressif.espblufi.communication.BlufiConfigureParams;
-import com.espressif.espblufi.communication.IBlufiCommunicator;
-import com.espressif.espblufi.communication.response.BlufiStatusResponse;
+import com.espressif.blufi.communiation.BlufiCommunicator;
+import com.espressif.blufi.communiation.BlufiConfigureParams;
+import com.espressif.blufi.communiation.IBlufiCommunicator;
+import com.espressif.blufi.communiation.response.BlufiStatusResponse;
+import com.espressif.espblufi.R;
+import com.espressif.espblufi.app.BlufiApp;
+import com.espressif.espblufi.constants.BlufiConstants;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import rx.Observable;
 import rx.Subscriber;
@@ -65,22 +73,39 @@ public class BlufiConfigureActivity extends BlufiAbsActivity implements AdapterV
     private View mStationForm;
     private EditText mStationSsidET;
     private EditText mStationPasswordET;
+    private Spinner mStationMeshIDSp;
 
     private BlufiCommunicator mCommunicator;
+
+    private boolean mBatch;
+
+    private String mBatchKey;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.blufi_configure_activity);
 
-        mWifiManager = (WifiManager) getSystemService(WIFI_SERVICE);
-        mCommunicator = BlufiBridge.sCommunicator;
+        mWifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+
+        mBatch = getIntent().getBooleanExtra(BlufiConstants.KEY_IS_BATCH_CONFIGURE, false);
+
+        if (mBatch) {
+            mBatchKey = getIntent().getStringExtra(BlufiConstants.KEY_BLE_DEVICES);
+        } else {
+            String key = getIntent().getStringExtra(BlufiConstants.KEY_COMMUNICATOR);
+            mCommunicator = (BlufiCommunicator) BlufiApp.getInstance().takeCache(key);
+        }
 
         mProgressBar = (ProgressBar) findViewById(R.id.progress);
         mScrollForm = (ScrollView) findViewById(R.id.scroll_form);
 
         mDeviceModeSp = (Spinner) findViewById(R.id.device_mode_sp);
         mDeviceModeSp.setOnItemSelectedListener(this);
+        if (mBatch) {
+            mDeviceModeSp.setSelection(1);
+            mDeviceModeSp.setEnabled(false);
+        }
 
         mSoftAPForm = findViewById(R.id.softap_security_form);
         mSoftapSecuritSP = (Spinner) findViewById(R.id.softap_security_sp);
@@ -92,11 +117,25 @@ public class BlufiConfigureActivity extends BlufiAbsActivity implements AdapterV
         mSoftAPMaxConnectionSp = (Spinner) findViewById(R.id.softap_max_connection);
 
         mWifiList = new ArrayList<>();
+        mWifiList.addAll(mWifiManager.getScanResults());
         mStationForm = findViewById(R.id.station_wifi_form);
         mStationSsidET = (EditText) findViewById(R.id.station_ssid);
         mStationSsidET.setText(getConnectionSSID());
         mStationPasswordET = (EditText) findViewById(R.id.station_wifi_password);
         findViewById(R.id.station_wifi_scan).setOnClickListener(v -> scanWifi());
+
+        SharedPreferences shared = getSharedPreferences(BlufiConstants.PREF_MESH_IDS_NAME, MODE_PRIVATE);
+        Set<String> bssidSet = shared.getAll().keySet();
+        if (bssidSet.isEmpty()) {
+            findViewById(R.id.station_mesh_id_form).setVisibility(View.GONE);
+        }
+        mStationMeshIDSp = (Spinner) findViewById(R.id.station_mesh_id);
+        List<String> meshIds = new ArrayList<>();
+        meshIds.add("");
+        meshIds.addAll(bssidSet);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, meshIds);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        mStationMeshIDSp.setAdapter(adapter);
 
         findViewById(R.id.confirm).setOnClickListener(v -> configure());
     }
@@ -123,6 +162,23 @@ public class BlufiConfigureActivity extends BlufiAbsActivity implements AdapterV
             ssid = ssid.substring(1, ssid.length() - 1);
         }
         return ssid;
+    }
+
+    private int getConnectionFrequncy() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            return -1;
+        }
+
+        if (!mWifiManager.isWifiEnabled()) {
+            return -1;
+        }
+
+        WifiInfo wifiInfo = mWifiManager.getConnectionInfo();
+        if (wifiInfo == null) {
+            return -1;
+        }
+
+        return wifiInfo.getFrequency();
     }
 
     @Override
@@ -292,6 +348,70 @@ public class BlufiConfigureActivity extends BlufiAbsActivity implements AdapterV
         return null;
     }
 
+    private int getWifiChannel(int frequency) {
+        int channel = -1;
+        switch (frequency) {
+            case 2412:
+                channel = 1;
+                break;
+            case 2417:
+                channel = 2;
+                break;
+            case 2422:
+                channel = 3;
+                break;
+            case 2427:
+                channel = 4;
+                break;
+            case 2432:
+                channel = 5;
+                break;
+            case 2437:
+                channel = 6;
+                break;
+            case 2442:
+                channel = 7;
+                break;
+            case 2447:
+                channel = 8;
+                break;
+            case 2452:
+                channel = 9;
+                break;
+            case 2457:
+                channel = 10;
+                break;
+            case 2462:
+                channel = 11;
+                break;
+            case 2467:
+                channel = 12;
+                break;
+            case 2472:
+                channel = 13;
+                break;
+            case 2484:
+                channel = 14;
+                break;
+            case 5745:
+                channel = 149;
+                break;
+            case 5765:
+                channel = 153;
+                break;
+            case 5785:
+                channel = 157;
+                break;
+            case 5805:
+                channel = 161;
+                break;
+            case 5825:
+                channel = 165;
+                break;
+        }
+        return channel;
+    }
+
     private boolean checkSta(BlufiConfigureParams params) {
         String ssid = mStationSsidET.getText().toString();
         if (TextUtils.isEmpty(ssid)) {
@@ -301,6 +421,33 @@ public class BlufiConfigureActivity extends BlufiAbsActivity implements AdapterV
         params.setStaSSID(ssid);
         String password = mStationPasswordET.getText().toString();
         params.setStaPassword(password);
+
+        int freq = -1;
+        if (ssid.equals(getConnectionSSID())) {
+            freq = getConnectionFrequncy();
+            if (freq != -1) {
+                params.setWifiChannel(getWifiChannel(freq));
+            }
+        }
+        if (freq == -1) {
+            for (ScanResult sr : mWifiList) {
+                if (ssid.equals(sr.SSID)) {
+                    freq = sr.frequency;
+                    params.setWifiChannel(getWifiChannel(freq));
+                    break;
+                }
+            }
+        }
+
+        String bssid = mStationMeshIDSp.getSelectedItem().toString();
+        if (!TextUtils.isEmpty(bssid)) {
+            String[] mac = bssid.split(":");
+            byte[] meshId = new byte[mac.length];
+            for (int i = 0; i < mac.length; i++) {
+                meshId[i] = (byte) Integer.parseInt(mac[i], 16);
+            }
+            params.setMeshID(meshId);
+        }
 
         return true;
     }
@@ -345,9 +492,20 @@ public class BlufiConfigureActivity extends BlufiAbsActivity implements AdapterV
             return;
         }
 
+        if (mBatch) {
+            Intent intent = new Intent(this, BlufiBatchConfigureActivity.class);
+            intent.putExtra(BlufiConstants.KEY_BLE_DEVICES, mBatchKey);
+            intent.putExtra(BlufiConstants.KEY_CONFIGURE_PARAM, params);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
         showProgress(true);
 
+        final long startTime = SystemClock.elapsedRealtime();
         final Intent data = new Intent();
+        params.setMeshRoot(true);
         Observable.just(mCommunicator)
                 .subscribeOn(Schedulers.io())
                 .map(blufiComm -> blufiComm.configure(params))
@@ -380,7 +538,10 @@ public class BlufiConfigureActivity extends BlufiAbsActivity implements AdapterV
                                 dataExtra = response.generateValidInfo();
                                 break;
                         }
-                        data.putExtra(BlufiBridge.KEY_CONFIGURE_DATA, dataExtra);
+                        data.putExtra(BlufiConstants.KEY_CONFIGURE_DATA, dataExtra);
+
+                        long configureTime = SystemClock.elapsedRealtime() - startTime;
+                        data.putExtra(BlufiConstants.KEY_CONFIGURE_TIME, configureTime);
                     }
                 });
     }

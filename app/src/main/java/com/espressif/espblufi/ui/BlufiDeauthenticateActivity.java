@@ -1,4 +1,4 @@
-package com.espressif.espblufi;
+package com.espressif.espblufi.ui;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -14,7 +14,10 @@ import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.espressif.espblufi.communication.BlufiCommunicator;
+import com.espressif.blufi.communiation.BlufiCommunicator;
+import com.espressif.espblufi.constants.BlufiConstants;
+import com.espressif.espblufi.R;
+import com.espressif.espblufi.app.BlufiApp;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -41,7 +44,8 @@ public class BlufiDeauthenticateActivity extends BlufiAbsActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.blufi_deauthenticate_activity);
 
-        mCommunicator = BlufiBridge.sCommunicator;
+        String key = getIntent().getStringExtra(BlufiConstants.KEY_COMMUNICATOR);
+        mCommunicator = (BlufiCommunicator) BlufiApp.getInstance().takeCache(key);
 
         mProgressBar = (ProgressBar) findViewById(R.id.progress);
 
@@ -112,7 +116,7 @@ public class BlufiDeauthenticateActivity extends BlufiAbsActivity {
                         for (int i = 0; i < bssidArray.length; i++) {
                             bssidArray[i] = bssidList.get(i);
                         }
-                        data.putExtra(BlufiBridge.KEY_DEAUTHENTICATE_DATA, bssidArray);
+                        data.putExtra(BlufiConstants.KEY_DEAUTHENTICATE_DATA, bssidArray);
                         setResult(RESULT_OK, data);
                         finish();
                     }
