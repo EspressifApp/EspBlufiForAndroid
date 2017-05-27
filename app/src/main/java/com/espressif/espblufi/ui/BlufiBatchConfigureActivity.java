@@ -182,7 +182,7 @@ public class BlufiBatchConfigureActivity extends BlufiAbsActivity {
 
         BlufiCommunicator communicator = new BlufiCommunicator(proxy, writeBGC, notifyBGC);
         SharedPreferences shared = getSharedPreferences(BlufiConstants.PREF_SETTINGS_NAME, MODE_PRIVATE);
-        int mtuLen = shared.getInt(BlufiConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.MIN_MTU_LENGTH);
+        int mtuLen = shared.getInt(BlufiConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
         communicator.requestMtu(mtuLen);
         if (mtuLen >= BlufiConstants.MIN_MTU_LENGTH) {
             communicator.setPostPackageLengthLimit(mtuLen - BlufiConstants.POST_DATA_LENGTH_LESS);
@@ -214,7 +214,7 @@ public class BlufiBatchConfigureActivity extends BlufiAbsActivity {
             return result;
         }
 
-        communicator.setRequireAck(true);
+//        communicator.setRequireAck(true);
         mParam.setMeshRoot(mRootDevice == device);
         mParam.setConfigureSequence(mDevices.indexOf(device));
         BlufiStatusResponse confResp = communicator.configure(mParam, false);

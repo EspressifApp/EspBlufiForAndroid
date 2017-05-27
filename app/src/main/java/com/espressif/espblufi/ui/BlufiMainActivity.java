@@ -486,7 +486,6 @@ public class BlufiMainActivity extends BlufiAbsActivity {
         BluetoothGattCallback callback = new BluetoothGattCallback() {
             @Override
             public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-                System.out.println(String.format(Locale.ENGLISH, "xxj status = %d, state = %d", status, newState));
                 switch (newState) {
                     case BluetoothProfile.STATE_CONNECTED:
                         mConnectedDevice = gatt.getDevice();

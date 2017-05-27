@@ -151,7 +151,7 @@ public class BlufiNegSecActivity extends BlufiAbsActivity {
             BluetoothGattService service = mProxy.discoverService(BlufiConstants.UUID_WIFI_SERVICE, timeout);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 SharedPreferences shared = getSharedPreferences(BlufiConstants.PREF_SETTINGS_NAME, MODE_PRIVATE);
-                int mtuLen = shared.getInt(BlufiConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.MIN_MTU_LENGTH);
+                int mtuLen = shared.getInt(BlufiConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
                 if (mProxy.requestMtu(mtuLen, 3000)) {
                     mMtuLength = mtuLen;
                 }
@@ -182,7 +182,7 @@ public class BlufiNegSecActivity extends BlufiAbsActivity {
                             if (mMtuLength >= BlufiConstants.MIN_MTU_LENGTH) {
                                 mCommunicator.setPostPackageLengthLimit(mMtuLength - BlufiConstants.POST_DATA_LENGTH_LESS);
                             }
-                            mCommunicator.setRequireAck(true);
+//                            mCommunicator.setRequireAck(true);
                             getVersion();
                         } else {
                             showProgress(false);
