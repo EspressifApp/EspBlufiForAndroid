@@ -11,13 +11,13 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/configure_softap_security" />
+        android:text="@string/esp_blufi_configure_softap_security" />
 
     <Spinner
         android:id="@+id/softap_security_sp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:entries="@array/configure_softap_security" />
+        android:entries="@array/esp_blufi_configure_softap_security" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -35,13 +35,13 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/configure_softap_channel" />
+                android:text="@string/esp_blufi_configure_softap_channel" />
 
             <Spinner
                 android:id="@+id/softap_channel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:entries="@array/configure_softap_channel" />
+                android:entries="@array/esp_blufi_configure_softap_channel" />
         </LinearLayout>
 
         <LinearLayout
@@ -54,13 +54,13 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/configure_softap_max_connection" />
+                android:text="@string/esp_blufi_configure_softap_max_connection" />
 
             <Spinner
                 android:id="@+id/softap_max_connection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:entries="@array/configure_softap_max_connection" />
+                android:entries="@array/esp_blufi_configure_softap_max_connection" />
         </LinearLayout>
     </LinearLayout>
 
@@ -73,7 +73,7 @@
             android:id="@+id/softap_ssid"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/configure_softap_ssid"
+            android:hint="@string/esp_blufi_configure_softap_ssid"
             android:maxLines="1" />
 
     </android.support.design.widget.TextInputLayout>
@@ -89,7 +89,7 @@
             android:id="@+id/softap_password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/configure_softap_password"
+            android:hint="@string/esp_blufi_configure_softap_password"
             android:imeActionId="@+id/login"
             android:imeActionLabel="@android:string/ok"
             android:imeOptions="actionUnspecified"

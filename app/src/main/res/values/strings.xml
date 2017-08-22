@@ -1,42 +1,35 @@
 <resources>
     <string name="app_name">EspBlufi</string>
 
-    <string name="connect_menu_settings">Settings</string>
-    <string name="connect_button_bar_batch_configure">Configure</string>
-    <string name="connect_button_bar_all">All</string>
-    <string name="connect_no_seleted_devices">No selected devices</string>
-    <string name="connect_selected_device_info">Select %d</string>
+    <string name="esp_blufi_list_title">EspBlufi</string>
+    <string name="esp_blufi_list_button_bar_batch_configure">Configure</string>
+    <string name="esp_blufi_list_button_bar_all">All</string>
+    <string name="esp_blufi_list_no_seleted_devices">No selected devices</string>
+    <string name="esp_blufi_list_selected_device_info">Select %d</string>
+    <string name="esp_blufi_list_bt_disable_msg">Bluetooth is disable</string>
+    <string name="esp_blufi_list_location_disable_msg">Location is disable</string>
 
-    <string name="bt_disable_msg">Bluetooth is disable</string>
-    <string name="location_disable_msg">Location is disable</string>
-    <string name="wifi_disable_msg">Wifi is disable</string>
-    <string name="wifi_no_selected_msg">No wifi has selected</string>
+    <string name="esp_blufi_settings_title">Configure</string>
+    <string name="esp_blufi_configure_title">Configure</string>
 
-    <string name="neg_sec_title">Prepare</string>
-    <string name="neg_sec_configure">Configure</string>
-    <string name="neg_sec_deauthenticate">Deauthenticate</string>
-
-    <string name="configure_title">Configure</string>
-    <string name="configure_scan">Scan</string>
-    <string name="configure_sel_device_mode">Select device mode</string>
-    <string name="configure_softap_security">SoftAP Security</string>
-    <string name="configure_softap_ssid">SoftAP ssid</string>
-    <string name="configure_softap_password">SoftAP password</string>
-    <string name="configure_softap_password_error">SoftAP password is too short</string>
-    <string name="configure_softap_channel">SoftAP channel</string>
-    <string name="configure_softap_max_connection">SoftAP max connection</string>
-    <string name="configure_station_mesh_id">Set mesh id</string>
-    <string name="configure_station_sel_wifi">Select Wifi</string>
-    <string name="configure_station_ssid">Wifi ssid</string>
-    <string name="configure_station_ssid_error">Wifi ssid can\'t be empty</string>
-    <string name="configure_station_password">Wifi password</string>
-    <string name="configure_station_wifi_scanning">Scanning wifi…</string>
-    <string name="configure_station_wifi_scanning_nothing">Found no WIFI</string>
-
-    <string name="batch_configure_title">Batch Configure</string>
-
-    <string name="deauthenticate_title">Deauthenticate</string>
-    <string name="deauthenticate_menu_item">Deauthenticate</string>
+    <string name="esp_blufi_configure_scan">Scan</string>
+    <string name="esp_blufi_configure_sel_device_mode">Select device mode</string>
+    <string name="esp_blufi_configure_multithread">Multithread</string>
+    <string name="esp_blufi_configure_softap_security">SoftAP Security</string>
+    <string name="esp_blufi_configure_softap_ssid">SoftAP ssid</string>
+    <string name="esp_blufi_configure_softap_password">SoftAP password</string>
+    <string name="esp_blufi_configure_softap_password_error">SoftAP password is too short</string>
+    <string name="esp_blufi_configure_softap_channel">SoftAP channel</string>
+    <string name="esp_blufi_configure_softap_max_connection">SoftAP max connection</string>
+    <string name="esp_blufi_configure_station_mesh_id">Set mesh id</string>
+    <string name="esp_blufi_configure_station_sel_wifi">Select Wifi</string>
+    <string name="esp_blufi_configure_station_ssid">Wifi ssid</string>
+    <string name="esp_blufi_configure_station_ssid_error">Wifi ssid can\'t be empty</string>
+    <string name="esp_blufi_configure_station_password">Wifi password</string>
+    <string name="esp_blufi_configure_station_wifi_scanning">Scanning wifi…</string>
+    <string name="esp_blufi_configure_station_wifi_scanning_nothing">Found no WIFI</string>
+    <string name="esp_blufi_configure_wifi_disable_msg">Wifi is disable</string>
+    <string name="esp_blufi_configure_wifi_no_selected_msg">No wifi has selected</string>
 
     <string name="settings_title">About</string>
     <string name="settings_category_blufi_key">setting_category_blufi</string>

@@ -9,8 +9,7 @@
     android:paddingBottom="@dimen/activity_vertical_margin"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="com.espressif.espblufi.ui.BlufiMainActivity">
+    android:paddingTop="@dimen/activity_vertical_margin" >
 
     <android.support.v4.widget.SwipeRefreshLayout
         android:id="@+id/refresh_layout"
@@ -38,13 +37,13 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/connect_button_bar_batch_configure" />
+            android:text="@string/esp_blufi_list_button_bar_batch_configure" />
 
         <Button
             android:id="@+id/button_bar_all"
             style="?android:attr/buttonBarButtonStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/connect_button_bar_all" />
+            android:text="@string/esp_blufi_list_button_bar_all" />
     </LinearLayout>
 </LinearLayout>

@@ -2,7 +2,10 @@ package com.espressif.espblufi.app;
 
 import android.app.Application;
 
+import com.espressif.libs.utils.RandomUtil;
+
 import java.util.HashMap;
+import java.util.Random;
 
 public class BlufiApp extends Application {
     private static BlufiApp instance;
@@ -30,20 +33,23 @@ public class BlufiApp extends Application {
         mCache.clear();
     }
 
-    public void putCache(String key, Object value) {
+    public String putCache(Object value) {
         synchronized (mCache) {
+            int keyLength = new Random().nextInt(20) + 20;
+            String key = RandomUtil.randomString(keyLength);
             mCache.put(key, value);
+            return key;
         }
     }
 
     public Object takeCache(String key) {
         synchronized (mCache) {
-            Object obj = mCache.get(key);
-            if (obj != null) {
+            Object result = mCache.get(key);
+            if (result != null) {
                 mCache.remove(key);
             }
 
-            return obj;
+            return result;
         }
     }
 }

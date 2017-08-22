@@ -1,8 +1,6 @@
 package com.espressif.espblufi.ui;
 
 import android.Manifest;
-import android.app.Activity;
-import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
@@ -15,7 +13,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.HandlerThread;
 import android.os.Looper;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBar;
@@ -33,14 +30,10 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.espressif.blufi.ble.proxy.BleGattClientProxy;
-import com.espressif.blufi.ble.proxy.BleGattClientProxyImpl;
-import com.espressif.blufi.ble.scanner.BleScanner;
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BlufiApp;
 import com.espressif.espblufi.constants.BlufiConstants;
-import com.espressif.tools.app.PermissionHelper;
-import com.espressif.tools.data.RandomUtil;
+import com.espressif.libs.app.PermissionHelper;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -53,15 +46,12 @@ import java.util.concurrent.TimeUnit;
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
-import rx.schedulers.Schedulers;
 
-public class BlufiMainActivity extends BlufiAbsActivity {
+public class BlufiListActivity extends BlufiAbsActivity {
     private static final int TIMEOUT_SCAN = 5;
-    private static final int TIMEOUT_CONNECT = 5000;
-
-    private static final int MENU_ID_SETTINGS = 0x10;
 
     private static final int REQUEST_PERMISSION = 1;
+    private static final int REQUEST_SETTINGS = 0x10;
 
     private PermissionHelper mPermissionHelper;
 
@@ -77,8 +67,6 @@ public class BlufiMainActivity extends BlufiAbsActivity {
     private List<EspBleDevice> mTempDevices;
 
     private Looper mBackgroundLooper;
-
-    private volatile long mStartConnectTime;
 
     private BluetoothGatt mCheckGatt;
     private BluetoothDevice mConnectingDevice;
@@ -163,6 +151,7 @@ public class BlufiMainActivity extends BlufiAbsActivity {
 
         mCheckCountTV = new TextView(this);
         mCheckCountTV.setTextColor(Color.WHITE);
+        mCheckCountTV.setPadding(0, 0, getResources().getDimensionPixelSize(R.dimen.activity_horizontal_margin), 0);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setCustomView(mCheckCountTV, new ActionBar.LayoutParams(
                     ActionBar.LayoutParams.WRAP_CONTENT,
@@ -197,23 +186,37 @@ public class BlufiMainActivity extends BlufiAbsActivity {
                 scan();
             }
         });
-        mPermissionHelper.requestAuthorities(new String[]{
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_FINE_LOCATION
-        });
+        mPermissionHelper.requestAuthorities(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION});
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
 
-        BleScanner.stopLeScan(mBTCallback);
+        BluetoothAdapter.getDefaultAdapter().stopLeScan(mBTCallback);
 
         if (mCheckGatt != null) {
             mCheckGatt.close();
             mCheckGatt = null;
         }
         mBackgroundLooper.quit();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(Menu.NONE, 0, 0, R.string.settings_title);
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case 0:
+                startActivity(new Intent(this, SettingsActivity.class));
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -233,19 +236,16 @@ public class BlufiMainActivity extends BlufiAbsActivity {
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(Menu.NONE, MENU_ID_SETTINGS, 0, R.string.connect_menu_settings);
-        return super.onCreateOptionsMenu(menu);
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case MENU_ID_SETTINGS:
-                startActivity(new Intent(this, BlufiSettingsActivity.class));
-                return true;
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case REQUEST_SETTINGS:
+                switch (resultCode) {
+                    case RESULT_OK:
+                        scan();
+                        break;
+                }
+                break;
         }
-        return super.onOptionsItemSelected(item);
     }
 
     private void selectAll() {
@@ -280,16 +280,14 @@ public class BlufiMainActivity extends BlufiAbsActivity {
         }
 
         if (bles.isEmpty()) {
-            Toast.makeText(this, R.string.connect_no_seleted_devices, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.esp_blufi_list_no_seleted_devices, Toast.LENGTH_SHORT).show();
         } else {
             closeCheckedGatt();
 
-            Intent intent = new Intent(this, BlufiConfigureActivity.class);
-            String rKey = RandomUtil.randomString(10);
-            BlufiApp.getInstance().putCache(rKey, bles);
+            Intent intent = new Intent(this, BlufiSettingsActivity.class);
+            String rKey = BlufiApp.getInstance().putCache(bles);
             intent.putExtra(BlufiConstants.KEY_BLE_DEVICES, rKey);
-            intent.putExtra(BlufiConstants.KEY_IS_BATCH_CONFIGURE, true);
-            startActivity(intent);
+            startActivityForResult(intent, REQUEST_SETTINGS);
         }
     }
 
@@ -298,7 +296,7 @@ public class BlufiMainActivity extends BlufiAbsActivity {
      */
     private void scan() {
         if (!BluetoothAdapter.getDefaultAdapter().isEnabled()) {
-            Toast.makeText(this, R.string.bt_disable_msg, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.esp_blufi_list_bt_disable_msg, Toast.LENGTH_SHORT).show();
             mRefreshLayout.setRefreshing(false);
             return;
         }
@@ -309,19 +307,19 @@ public class BlufiMainActivity extends BlufiAbsActivity {
             boolean locationGPS = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
             boolean locationNetwork = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
             if (!locationGPS && !locationNetwork) {
-                Toast.makeText(this, R.string.location_disable_msg, Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.esp_blufi_list_location_disable_msg, Toast.LENGTH_SHORT).show();
                 mRefreshLayout.setRefreshing(false);
                 return;
             }
         }
 
-        BleScanner.startLeScan(mBTCallback);
+        BluetoothAdapter.getDefaultAdapter().startLeScan(mBTCallback);
         Observable.timer(TIMEOUT_SCAN, TimeUnit.SECONDS)
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(new Subscriber<Long>() {
                     @Override
                     public void onCompleted() {
-                        BleScanner.stopLeScan(mBTCallback);
+                        BluetoothAdapter.getDefaultAdapter().stopLeScan(mBTCallback);
                         removeGarbageDevices();
                     }
 
@@ -369,7 +367,7 @@ public class BlufiMainActivity extends BlufiAbsActivity {
             }
         }
 
-        mCheckCountTV.setText(getString(R.string.connect_selected_device_info, count));
+        mCheckCountTV.setText(getString(R.string.esp_blufi_list_selected_device_info, count));
     }
 
     private void removeGarbageDevices() {
@@ -431,47 +429,6 @@ public class BlufiMainActivity extends BlufiAbsActivity {
                 });
     }
 
-    private void connect(final BluetoothDevice device) {
-        final ProgressDialog dialog = new ProgressDialog(this);
-        dialog.setMessage(String.format(Locale.ENGLISH, "Connecting %s", device.getName()));
-        dialog.setCancelable(false);
-        dialog.show();
-
-        Observable.just(device).subscribeOn(Schedulers.io())
-                .map(dev -> {
-                    closeCheckedGatt();
-
-                    BleGattClientProxy proxy = new BleGattClientProxyImpl(getApplicationContext());
-                    mStartConnectTime = SystemClock.elapsedRealtime();
-                    if (proxy.connect(dev, TIMEOUT_CONNECT)) {
-                        return proxy;
-                    } else {
-                        proxy.close();
-                        return null;
-                    }
-                })
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(proxy -> {
-                    dialog.dismiss();
-                    Activity activity = BlufiMainActivity.this;
-                    if (proxy == null) {
-                        Toast.makeText(activity, "Connect failed", Toast.LENGTH_LONG).show();
-                    } else {
-                        Toast.makeText(activity, "Connect completed", Toast.LENGTH_LONG).show();
-
-                        Intent intent = new Intent(activity, BlufiNegSecActivity.class);
-                        long connectTime = SystemClock.elapsedRealtime() - mStartConnectTime;
-                        intent.putExtra(BlufiConstants.KEY_CONNECT_TIME, connectTime);
-
-                        String key = RandomUtil.randomString(10);
-                        BlufiApp.getInstance().putCache(key, proxy);
-                        intent.putExtra(BlufiConstants.KEY_PROXY, key);
-
-                        activity.startActivity(intent);
-                    }
-                });
-    }
-
     private void closeCheckedGatt() {
         if (mCheckGatt != null) {
             mCheckGatt.close();
@@ -486,6 +443,7 @@ public class BlufiMainActivity extends BlufiAbsActivity {
         BluetoothGattCallback callback = new BluetoothGattCallback() {
             @Override
             public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+                System.out.println("blufi onConnectionStateChange status = " + status + " state = " + newState);
                 switch (newState) {
                     case BluetoothProfile.STATE_CONNECTED:
                         mConnectedDevice = gatt.getDevice();
@@ -500,39 +458,38 @@ public class BlufiMainActivity extends BlufiAbsActivity {
                         mConnectingDevice = null;
                         break;
                 }
-                Observable.create(subscriber -> mBTAdapter.notifyDataSetChanged())
-                        .subscribeOn(AndroidSchedulers.mainThread())
-                        .subscribe();
+                runOnUiThread(() -> mBTAdapter.notifyDataSetChanged());
+            }
+
+            @Override
+            public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+                System.out.println("blufi onServicesDiscovered status = " + status);
+                super.onServicesDiscovered(gatt, status);
             }
         };
 
         mConnectingDevice = ble.device;
         mBTAdapter.notifyDataSetChanged();
-        if (mCheckGatt == null) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                mCheckGatt = ble.device.connectGatt(this, false, callback, BluetoothDevice.TRANSPORT_LE);
-            } else {
-                mCheckGatt = ble.device.connectGatt(this, false, callback);
-            }
-        } else {
-            if (ble.device.equals(mCheckGatt.getDevice())) {
-                mCheckGatt.connect();
-            } else {
-                mCheckGatt.close();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    mCheckGatt = ble.device.connectGatt(this, false, callback, BluetoothDevice.TRANSPORT_LE);
-                } else {
-                    mCheckGatt = ble.device.connectGatt(this, false, callback);
-                }
-            }
-        }
 
+        if (mCheckGatt != null) {
+            mCheckGatt.disconnect();
+            mCheckGatt.close();
+            mCheckGatt = null;
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            mCheckGatt = ble.device.connectGatt(this, false, callback, BluetoothDevice.TRANSPORT_LE);
+        } else {
+            mCheckGatt = ble.device.connectGatt(this, false, callback);
+        }
+        mCheckGatt.discoverServices();
     }
 
     private void unChecked(EspBleDevice ble) {
         if (mCheckGatt != null) {
             if (sameBle(ble.device, mCheckGatt.getDevice())) {
                 mCheckGatt.disconnect();
+                mCheckGatt.close();
+                mCheckGatt = null;
             }
 
             if (sameBle(ble.device, mConnectedDevice)) {
@@ -546,10 +503,7 @@ public class BlufiMainActivity extends BlufiAbsActivity {
     }
 
     private boolean sameBle(BluetoothDevice d1, BluetoothDevice d2) {
-        if (d1 == null || d2 == null) {
-            return false;
-        }
-        return d1.getAddress().equalsIgnoreCase(d2.getAddress());
+        return d1 != null && d2 != null && d1.getAddress().equalsIgnoreCase(d2.getAddress());
     }
 
     private static class BackgroundThread extends HandlerThread {
@@ -612,20 +566,12 @@ public class BlufiMainActivity extends BlufiAbsActivity {
         public void onClick(View v) {
             if (v == checkBox) {
                 ble.checked = checkBox.isChecked();
-
-                if (ble.checked) {
-                    checked(ble);
-                } else {
-                    unChecked(ble);
-                }
-
-                updateSelectDeviceCountInfo();
+                checkBle();
             } else if (v == view) {
-                if (mBTAdapter.mCheckable) {
-                    return;
-                }
-
-                connect(ble.device);
+                setCheckMode(true);
+                ble.checked = !checkBox.isChecked();
+                checkBox.setChecked(ble.checked);
+                checkBle();
             }
         }
 
@@ -634,16 +580,26 @@ public class BlufiMainActivity extends BlufiAbsActivity {
             setCheckMode(true);
             return true;
         }
+
+        private void checkBle() {
+            if (ble.checked) {
+                checked(ble);
+            } else {
+                unChecked(ble);
+            }
+
+            updateSelectDeviceCountInfo();
+        }
     }
 
     private class BTAdapter extends RecyclerView.Adapter<BTHolder> {
-        LayoutInflater mInflater = BlufiMainActivity.this.getLayoutInflater();
+        LayoutInflater mInflater = BlufiListActivity.this.getLayoutInflater();
 
         boolean mCheckable = false;
 
         @Override
         public BTHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            View itemView = mInflater.inflate(R.layout.bluetooth_device_item, parent, false);
+            View itemView = mInflater.inflate(R.layout.blufi_device_item, parent, false);
             return new BTHolder(itemView);
         }
 

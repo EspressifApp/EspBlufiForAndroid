@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:baselineAligned="false"
+    android:orientation="horizontal">
+
+    <RelativeLayout
+        android:layout_width="0dip"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="5dp"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/device_mode_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/esp_blufi_configure_sel_device_mode" />
+
+        <Spinner
+            android:id="@+id/device_mode_sp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/device_mode_text"
+            android:entries="@array/esp_blufi_configure_device_modes" />
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="0dip"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="5dp"
+        android:layout_weight="1">
+
+        <TextView
+            android:id="@+id/multithread_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/esp_blufi_configure_multithread" />
+
+        <Spinner
+            android:id="@+id/multithread_sp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/multithread_text"
+            android:entries="@array/esp_blufi_configure_multithread" />
+    </RelativeLayout>
+</LinearLayout>

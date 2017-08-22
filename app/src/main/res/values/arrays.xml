@@ -1,20 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string-array name="configure_device_modes">
-        <item>NULL</item>
+    <string-array name="esp_blufi_configure_device_modes">
         <item>Station</item>
         <item>SoftAP</item>
         <item>SoftAP/Station</item>
     </string-array>
-    <string-array name="configure_softap_security">
+    <string-array name="esp_blufi_configure_softap_security">
         <item>Open</item>
         <item>WEP</item>
         <item>WPA PSK</item>
         <item>WPA2 PSK</item>
         <item>WPA WAP2 PSK</item>
     </string-array>
-    <string-array name="configure_softap_channel">
-        <item></item>
+    <string-array name="esp_blufi_configure_softap_channel">
+        <item />
         <item>1</item>
         <item>2</item>
         <item>3</item>
@@ -29,8 +28,14 @@
         <item>12</item>
         <item>13</item>
     </string-array>
-    <string-array name="configure_softap_max_connection">
-        <item></item>
+    <string-array name="esp_blufi_configure_softap_max_connection">
+        <item />
+        <item>1</item>
+        <item>2</item>
+        <item>3</item>
+        <item>4</item>
+    </string-array>
+    <string-array name="esp_blufi_configure_multithread">
         <item>1</item>
         <item>2</item>
         <item>3</item>

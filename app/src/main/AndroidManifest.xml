@@ -17,7 +17,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".ui.BlufiMainActivity"
+            android:name=".ui.BlufiListActivity"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -26,23 +26,15 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.BlufiNegSecActivity"
-            android:label="@string/neg_sec_title"
+            android:name=".ui.BlufiSettingsActivity"
+            android:label="@string/esp_blufi_settings_title"
             android:screenOrientation="portrait" />
         <activity
             android:name=".ui.BlufiConfigureActivity"
-            android:label="@string/configure_title"
+            android:label="@string/esp_blufi_configure_title"
             android:screenOrientation="portrait" />
         <activity
-            android:name=".ui.BlufiBatchConfigureActivity"
-            android:label="@string/batch_configure_title"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.BlufiDeauthenticateActivity"
-            android:label="@string/deauthenticate_title"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".ui.BlufiSettingsActivity"
+            android:name=".ui.SettingsActivity"
             android:label="@string/settings_title"
             android:screenOrientation="portrait" />
     </application>

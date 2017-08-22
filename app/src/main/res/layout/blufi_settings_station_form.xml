@@ -13,12 +13,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="15dp"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:visibility="gone">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/configure_station_mesh_id" />
+            android:text="@string/esp_blufi_configure_station_mesh_id" />
 
         <Spinner
             android:id="@+id/station_mesh_id"
@@ -29,7 +30,7 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/configure_station_sel_wifi" />
+        android:text="@string/esp_blufi_configure_station_sel_wifi" />
 
     <LinearLayout
         android:id="@+id/station_wifi_ssid_form"
@@ -44,11 +45,11 @@
             android:layout_weight="1"
             app:passwordToggleEnabled="true">
 
-            <EditText
+            <AutoCompleteTextView
                 android:id="@+id/station_ssid"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@string/configure_station_ssid"
+                android:hint="@string/esp_blufi_configure_station_ssid"
                 android:maxLines="1" />
 
         </android.support.design.widget.TextInputLayout>
@@ -71,7 +72,7 @@
             android:id="@+id/station_wifi_password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/configure_station_password"
+            android:hint="@string/esp_blufi_configure_station_password"
             android:imeActionId="@+id/login"
             android:imeActionLabel="@android:string/ok"
             android:imeOptions="actionUnspecified"
