@@ -3,9 +3,6 @@ package com.espressif.espblufi.ui;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCallback;
-import android.bluetooth.BluetoothProfile;
 import android.content.Intent;
 import android.graphics.Color;
 import android.location.LocationManager;
@@ -67,10 +64,6 @@ public class BlufiListActivity extends BlufiAbsActivity {
     private List<EspBleDevice> mTempDevices;
 
     private Looper mBackgroundLooper;
-
-    private BluetoothGatt mCheckGatt;
-    private BluetoothDevice mConnectingDevice;
-    private BluetoothDevice mConnectedDevice;
 
     private BluetoothAdapter.LeScanCallback mBTCallback = new BluetoothAdapter.LeScanCallback() {
 
@@ -195,10 +188,6 @@ public class BlufiListActivity extends BlufiAbsActivity {
 
         BluetoothAdapter.getDefaultAdapter().stopLeScan(mBTCallback);
 
-        if (mCheckGatt != null) {
-            mCheckGatt.close();
-            mCheckGatt = null;
-        }
         mBackgroundLooper.quit();
     }
 
@@ -262,10 +251,6 @@ public class BlufiListActivity extends BlufiAbsActivity {
             d.checked = actionCheck;
         }
 
-        if (!actionCheck) {
-            closeCheckedGatt();
-        }
-
         mBTAdapter.notifyDataSetChanged();
 
         updateSelectDeviceCountInfo();
@@ -282,8 +267,6 @@ public class BlufiListActivity extends BlufiAbsActivity {
         if (bles.isEmpty()) {
             Toast.makeText(this, R.string.esp_blufi_list_no_seleted_devices, Toast.LENGTH_SHORT).show();
         } else {
-            closeCheckedGatt();
-
             Intent intent = new Intent(this, BlufiSettingsActivity.class);
             String rKey = BlufiApp.getInstance().putCache(bles);
             intent.putExtra(BlufiConstants.KEY_BLE_DEVICES, rKey);
@@ -429,79 +412,6 @@ public class BlufiListActivity extends BlufiAbsActivity {
                 });
     }
 
-    private void closeCheckedGatt() {
-        if (mCheckGatt != null) {
-            mCheckGatt.close();
-            mCheckGatt = null;
-            mConnectedDevice = null;
-            mConnectingDevice = null;
-            runOnUiThread(() -> mBTAdapter.notifyDataSetChanged());
-        }
-    }
-
-    private void checked(EspBleDevice ble) {
-        BluetoothGattCallback callback = new BluetoothGattCallback() {
-            @Override
-            public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-                System.out.println("blufi onConnectionStateChange status = " + status + " state = " + newState);
-                switch (newState) {
-                    case BluetoothProfile.STATE_CONNECTED:
-                        mConnectedDevice = gatt.getDevice();
-                        mConnectingDevice = null;
-                        break;
-                    case BluetoothProfile.STATE_CONNECTING:
-                        mConnectingDevice = gatt.getDevice();
-                        mConnectedDevice = null;
-                        break;
-                    default:
-                        mConnectedDevice = null;
-                        mConnectingDevice = null;
-                        break;
-                }
-                runOnUiThread(() -> mBTAdapter.notifyDataSetChanged());
-            }
-
-            @Override
-            public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-                System.out.println("blufi onServicesDiscovered status = " + status);
-                super.onServicesDiscovered(gatt, status);
-            }
-        };
-
-        mConnectingDevice = ble.device;
-        mBTAdapter.notifyDataSetChanged();
-
-        if (mCheckGatt != null) {
-            mCheckGatt.disconnect();
-            mCheckGatt.close();
-            mCheckGatt = null;
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            mCheckGatt = ble.device.connectGatt(this, false, callback, BluetoothDevice.TRANSPORT_LE);
-        } else {
-            mCheckGatt = ble.device.connectGatt(this, false, callback);
-        }
-        mCheckGatt.discoverServices();
-    }
-
-    private void unChecked(EspBleDevice ble) {
-        if (mCheckGatt != null) {
-            if (sameBle(ble.device, mCheckGatt.getDevice())) {
-                mCheckGatt.disconnect();
-                mCheckGatt.close();
-                mCheckGatt = null;
-            }
-
-            if (sameBle(ble.device, mConnectedDevice)) {
-                mConnectedDevice = null;
-                mBTAdapter.notifyDataSetChanged();
-            } else if (sameBle(ble.device, mConnectingDevice)) {
-                mConnectingDevice = null;
-                mBTAdapter.notifyDataSetChanged();
-            }
-        }
-    }
-
     private boolean sameBle(BluetoothDevice d1, BluetoothDevice d2) {
         return d1 != null && d2 != null && d1.getAddress().equalsIgnoreCase(d2.getAddress());
     }
@@ -566,29 +476,21 @@ public class BlufiListActivity extends BlufiAbsActivity {
         public void onClick(View v) {
             if (v == checkBox) {
                 ble.checked = checkBox.isChecked();
-                checkBle();
+                updateSelectDeviceCountInfo();
             } else if (v == view) {
                 setCheckMode(true);
                 ble.checked = !checkBox.isChecked();
                 checkBox.setChecked(ble.checked);
-                checkBle();
+                updateSelectDeviceCountInfo();
             }
+
+            updateSelectDeviceCountInfo();
         }
 
         @Override
         public boolean onLongClick(View v) {
             setCheckMode(true);
             return true;
-        }
-
-        private void checkBle() {
-            if (ble.checked) {
-                checked(ble);
-            } else {
-                unChecked(ble);
-            }
-
-            updateSelectDeviceCountInfo();
         }
     }
 
@@ -621,17 +523,6 @@ public class BlufiListActivity extends BlufiAbsActivity {
             holder.checkBox.setChecked(holder.ble.checked);
 
             holder.status1.setBackgroundResource(R.drawable.ic_bluetooth);
-            if (sameBle(holder.ble.device, mConnectedDevice)) {
-                holder.status1.setVisibility(View.VISIBLE);
-            } else {
-                holder.status1.setVisibility(View.GONE);
-            }
-
-            if (sameBle(holder.ble.device, mConnectingDevice)) {
-                holder.progress1.setVisibility(View.VISIBLE);
-            } else {
-                holder.progress1.setVisibility(View.GONE);
-            }
         }
 
         @Override

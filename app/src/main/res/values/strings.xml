@@ -28,6 +28,7 @@
     <string name="esp_blufi_configure_station_password">Wifi password</string>
     <string name="esp_blufi_configure_station_wifi_scanning">Scanning wifi…</string>
     <string name="esp_blufi_configure_station_wifi_scanning_nothing">Found no WIFI</string>
+    <string name="esp_blufi_configure_station_response">Wait station response</string>
     <string name="esp_blufi_configure_wifi_disable_msg">Wifi is disable</string>
     <string name="esp_blufi_configure_wifi_no_selected_msg">No wifi has selected</string>
 

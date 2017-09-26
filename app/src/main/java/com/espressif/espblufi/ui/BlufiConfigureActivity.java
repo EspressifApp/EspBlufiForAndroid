@@ -342,7 +342,7 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
 
             mParam.setMeshRoot(mRootDevice == device);
             mParam.setConfigureSequence(mAllDevices.indexOf(device));
-            BlufiStatusResponse confResp = communicator.configure(mParam, false);
+            BlufiStatusResponse confResp = communicator.configure(mParam);
             EspLog.d("xxj task config suc");
             switch (confResp.getResultCode()) {
                 case BlufiStatusResponse.RESULT_SUCCESS:

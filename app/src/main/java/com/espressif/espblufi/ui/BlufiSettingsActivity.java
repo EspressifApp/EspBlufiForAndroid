@@ -16,6 +16,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -73,6 +74,7 @@ public class BlufiSettingsActivity extends BlufiAbsActivity implements AdapterVi
     private AutoCompleteTextView mStationSsidET;
     private EditText mStationPasswordET;
     private Spinner mStationMeshIDSp;
+    private CheckBox mStationRespCB;
 
     private String mBatchKey;
 
@@ -145,6 +147,7 @@ public class BlufiSettingsActivity extends BlufiAbsActivity implements AdapterVi
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, meshIds);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         mStationMeshIDSp.setAdapter(adapter);
+        mStationRespCB = (CheckBox) findViewById(R.id.station_resp);
 
         findViewById(R.id.confirm).setOnClickListener(v -> configure());
 
@@ -393,6 +396,8 @@ public class BlufiSettingsActivity extends BlufiAbsActivity implements AdapterVi
             }
             params.setMeshID(meshId);
         }
+
+        params.setStaRespRequire(mStationRespCB.isChecked());
 
         // Save in db
 //        EspDBManager.getInstance().ap().insertOrReplace(ssid, password);

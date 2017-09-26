@@ -80,4 +80,12 @@
             android:maxLines="1" />
 
     </android.support.design.widget.TextInputLayout>
+
+    <CheckBox
+        android:id="@+id/station_resp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:checked="true"
+        android:text="@string/esp_blufi_configure_station_response" />
 </LinearLayout>
