@@ -17,6 +17,7 @@ import android.widget.TextView;
 
 import com.esp.iot.blufi.communiation.BlufiCommunicator;
 import com.esp.iot.blufi.communiation.BlufiConfigureParams;
+import com.esp.iot.blufi.communiation.IBlufiCommunicator;
 import com.esp.iot.blufi.communiation.response.BlufiSecurityResult;
 import com.esp.iot.blufi.communiation.response.BlufiStatusResponse;
 import com.espressif.espblufi.R;
@@ -355,6 +356,30 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
                     result.msg.append("-Negotiate check failed\n");
                     result.success = false;
                     return result;
+            }
+
+            BlufiStatusResponse statusResp;
+            final int opMode = mParam.getOpMode();
+            switch (opMode) {
+                case IBlufiCommunicator.OP_MODE_STA:
+                case IBlufiCommunicator.OP_MODE_STASOFTAP:
+                    statusResp = communicator.getStatus();
+                    if (statusResp != null) {
+                        if (mParam.getStaSSID().equals(statusResp.getStaSSID())) {
+                            result.msg.append("-Already connected target AP\n")
+                                    .append("\nCurrent status:\n")
+                                    .append(statusResp.generateValidInfo());
+                            switch (opMode) {
+                                case IBlufiCommunicator.OP_MODE_STA:
+                                    result.success = true;
+                                    return result;
+                                case IBlufiCommunicator.OP_MODE_STASOFTAP:
+                                    mParam.setStaRespRequire(false);
+                                    break;
+                            }
+                        }
+                    }
+                    break;
             }
 
             mParam.setMeshRoot(mRootDevice == device);
