@@ -42,6 +42,7 @@ import rx.schedulers.Schedulers;
 
 public class BlufiConfigureActivity extends BlufiAbsActivity {
     private final Object mConnectLock = new Object();
+    private final EspLog EspLog = new EspLog(getClass());
 
     private TextView mTextView;
 
@@ -230,13 +231,19 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
 
     private ConfigureResult executeTask(ConfigureDevice configureDevice) {
         Task task = new Task(configureDevice);
+        ConfigureResult result = null;
         try {
-            return task.run();
+            result = task.run();
+            return result;
         } catch (InterruptedException e) {
             e.printStackTrace();
             return null;
         } finally {
             task.close();
+            EspLog.d("configure task close");
+            if (result != null) {
+                result.msg.append("-Disconnect BLE\n");
+            }
         }
     }
 
@@ -271,8 +278,9 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
         }
 
         ConfigureResult run() throws InterruptedException {
-            EspLog.d("xxj task start");
+            EspLog.d("BLE task start");
             ConfigureResult result = new ConfigureResult();
+            result.msg.append("Start configure.\n");
 
             mBleHelper = new EspBleHelper(getApplicationContext());
             boolean connect;
@@ -280,62 +288,71 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
                 connect = mBleHelper.connectGatt(device.device);
             }
             if (!connect) {
-                result.msg = "connect failed";
+                result.msg.append("-Connect failed.\n");
                 result.success = false;
                 return result;
             }
-            EspLog.d("xxj task connect suc");
+            EspLog.d("BLE task connect suc");
+            result.msg.append("-Connect success.\n");
 
             service = mBleHelper.discoverService(BlufiConstants.UUID_WIFI_SERVICE);
             if (service == null) {
-                result.msg = "discover gatt service failed";
+                result.msg.append("-Discover gatt service failed.\n");
                 result.success = false;
                 return result;
             }
-            EspLog.d("xxj task service suc");
+            EspLog.d("BLE task service suc");
+            result.msg.append("-Discover gattservice success.\n");
 
             send = service.getCharacteristic(BlufiConstants.UUID_WRITE_CHARACTERISTIC);
             if (send == null) {
-                result.msg = "discover write characteristic failed";
+                result.msg.append("-Discover write characteristic failed.\n");
                 result.success = false;
                 return result;
             }
+            result.msg.append("-Discover write characteristic success.\n");
             recv = service.getCharacteristic(BlufiConstants.UUID_NOTIFICATION_CHARACTERISTIC);
             if (recv == null) {
-                result.msg = "discover notification characteristic failed";
+                result.msg.append("-Discover notification characteristic failed.\n");
                 result.success = false;
                 return result;
             }
+            result.msg.append("-Discover notification characteristic success.\n");
 
             SharedPreferences shared = getSharedPreferences(SettingsConstants.PREF_SETTINGS_NAME, MODE_PRIVATE);
             int mtuLen = shared.getInt(SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                mBleHelper.requestMtu(mtuLen);
+                boolean mtu = mBleHelper.requestMtu(mtuLen);
+                boolean pri = mBleHelper.requestConnectionPriority(EspBleHelper.CONNECTION_PRIORITY_HIGH);
+
+                result.msg.append("-Request mtu ").append(mtuLen).append(" ").append(mtu).append('\n');
+                result.msg.append("-Request connection priority high ").append(pri).append('\n');
             }
-            EspLog.d("xxj task mtu suc");
+            EspLog.d("BLE task mtu suc");
 
             communicator = new BlufiCommunicator(mBleHelper, send, recv);
             communicator.setPostPackageLengthLimit(mtuLen - BlufiConstants.POST_DATA_LENGTH_LESS);
 
             BlufiSecurityResult negsec = communicator.negotiateSecurity();
-            EspLog.d("xxj task neg suc");
+            EspLog.d("BLE task neg suc");
             switch (negsec) {
                 case SUCCESS:
+                    result.msg.append("-Negotiate security success\n");
                     break;
                 case POST_PGK_FAILED:
-                    result.msg = "negotiate post pgk failed";
+                    result.msg.append("-Negotiate post p,g,public key failed\n");
                     result.success = false;
                     return result;
                 case RECV_PV_FAILED:
-                    result.msg = "negotiate recv device pv failed";
+                    result.msg.append("-Negotiate receive device public key failed\n");
                     result.success = false;
                     return result;
                 case POST_SET_MODE_FAILED:
-                    result.msg = "negotiate post set mode failed";
+                    result.msg.append("-Negotiate post set mode failed\n");
                     result.success = false;
                     return result;
                 case CHECK_FAILED:
-                    result.msg = "negotiate check failed";
+                    result.msg.append("-Negotiate check failed\n");
                     result.success = false;
                     return result;
             }
@@ -343,22 +360,26 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
             mParam.setMeshRoot(mRootDevice == device);
             mParam.setConfigureSequence(mAllDevices.indexOf(device));
             BlufiStatusResponse confResp = communicator.configure(mParam);
-            EspLog.d("xxj task config suc");
+            EspLog.d("BLE task config suc");
+
             switch (confResp.getResultCode()) {
                 case BlufiStatusResponse.RESULT_SUCCESS:
-                    result.msg = "completed";
+                    result.msg.append("-Configure success.\n")
+                            .append("\nCurrent status:\n")
+                            .append(confResp.generateValidInfo())
+                            .append('\n');
                     result.success = true;
                     return result;
                 case BlufiStatusResponse.RESULT_TIMEOUT:
-                    result.msg = "receive wifi state timeout";
+                    result.msg.append("-Receive wifi state timeout\n");
                     result.success = false;
                     return result;
                 case BlufiStatusResponse.RESULT_PARSE_FAILED:
-                    result.msg = "receive wifi sstate parse data error";
+                    result.msg.append("-Receive wifi sstate parse data error\n");
                     result.success = false;
                     return result;
                 case BlufiStatusResponse.RESULT_POST_FAILED:
-                    result.msg = "post wifi info failed";
+                    result.msg.append("-Post wifi info failed\n");
                     result.success = false;
                     return result;
             }
@@ -382,7 +403,7 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
 
     private class ConfigureResult {
         boolean success;
-        String msg;
+        StringBuilder msg = new StringBuilder();
     }
 
     private class Holder extends RecyclerView.ViewHolder implements View.OnClickListener {
@@ -410,7 +431,7 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
 
             StringBuilder msg = new StringBuilder();
             for (ConfigureResult cr : configureDevice.results) {
-                msg.append(cr.msg).append('\n');
+                msg.append(cr.msg).append("\n===============\n");
             }
             new AlertDialog.Builder(BlufiConfigureActivity.this)
                     .setMessage(msg)
@@ -443,7 +464,7 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
                     holder.text2.append("Complete");
                 } else {
                     if (cd.over) {
-                        holder.text2.append(cd.results.getLast().msg);
+                        holder.text2.append("Failed, click to show information");
                     } else {
                         holder.text2.append("Waiting...");
                     }

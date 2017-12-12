@@ -32,12 +32,15 @@
     <string name="esp_blufi_configure_wifi_disable_msg">Wifi is disable</string>
     <string name="esp_blufi_configure_wifi_no_selected_msg">No wifi has selected</string>
 
-    <string name="settings_title">About</string>
+    <string name="settings_title">Settings</string>
     <string name="settings_category_blufi_key">setting_category_blufi</string>
     <string name="settings_category_blufi_title">Blufi</string>
     <string name="settings_mtu_length_key">settings_key_mtu_length</string>
     <string name="settings_mtu_length_title">Set mtu length</string>
     <string name="settings_mtu_length_hint">Enter a number great than %1$d</string>
+    <string name="settings_ble_prefix_key">settings_key_ble_prefix</string>
+    <string name="settings_ble_prefix_title">BLE devices filter</string>
+    <string name="settings_ble_prefix_hint">Device name start with</string>
     <string name="settings_category_version_title">Version</string>
     <string name="settings_version_key">settings_key_version</string>
     <string name="settings_version_title">APP Version</string>

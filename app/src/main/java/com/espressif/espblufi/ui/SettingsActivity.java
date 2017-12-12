@@ -1,7 +1,5 @@
 package com.espressif.espblufi.ui;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -16,6 +14,7 @@ import android.text.TextUtils;
 
 import com.esp.iot.blufi.communiation.BlufiProtocol;
 import com.espressif.espblufi.R;
+import com.espressif.espblufi.app.BlufiApp;
 import com.espressif.espblufi.constants.BlufiConstants;
 import com.espressif.espblufi.constants.SettingsConstants;
 
@@ -32,9 +31,13 @@ public class SettingsActivity extends AppCompatActivity {
     }
 
     public static class BlufiSettingsFragment extends PreferenceFragment implements Preference.OnPreferenceChangeListener {
-        private EditTextPreference mMtuPref;
+        private static final String KEY_MTU_LENGTH = SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH;
+        private static final String KEY_BLE_PREFIX = SettingsConstants.PREF_SETTINGS_KEY_BLE_PREFIX;
 
-        private SharedPreferences mShared;
+        private BlufiApp mApp;
+
+        private EditTextPreference mMtuPref;
+        private EditTextPreference mBlePrefixPref;
 
         @Override
         public void onCreate(Bundle savedInstanceState) {
@@ -42,7 +45,7 @@ public class SettingsActivity extends AppCompatActivity {
 
             addPreferencesFromResource(R.xml.blufi_settings);
 
-            mShared = getActivity().getSharedPreferences(SettingsConstants.PREF_SETTINGS_NAME, Context.MODE_PRIVATE);
+            mApp = BlufiApp.getInstance();
 
             findPreference(getString(R.string.settings_version_key)).setSummary(getVersionName());
 
@@ -55,15 +58,19 @@ public class SettingsActivity extends AppCompatActivity {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
                 PreferenceCategory blufiCategory = (PreferenceCategory) findPreference(getString(R.string.settings_category_blufi_key));
                 blufiCategory.removePreference(mMtuPref);
-                getPreferenceScreen().removePreference(blufiCategory);
             } else {
                 mMtuPref.getEditText().setHint(getString(R.string.settings_mtu_length_hint, BlufiConstants.MIN_MTU_LENGTH));
-                int mtuLen = mShared.getInt(SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
+                int mtuLen = (int) mApp.settingsGet(KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
                 mMtuPref.setOnPreferenceChangeListener(this);
                 if (mtuLen >= BlufiConstants.MIN_MTU_LENGTH) {
                     mMtuPref.setSummary(String.valueOf(mtuLen));
                 }
             }
+
+            mBlePrefixPref = (EditTextPreference) findPreference(getString(R.string.settings_ble_prefix_key));
+            mBlePrefixPref.setOnPreferenceChangeListener(this);
+            String blePrefix = (String) mApp.settingsGet(KEY_BLE_PREFIX, BlufiConstants.BLUFI_PREFIX);
+            mBlePrefixPref.setSummary(blePrefix);
         }
 
         public String getVersionName() {
@@ -90,11 +97,16 @@ public class SettingsActivity extends AppCompatActivity {
                     }
                 }
                 mMtuPref.setSummary(String.valueOf(mtuLen));
-                mShared.edit().putInt(SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, mtuLen).apply();
+                mApp.settingsPut(KEY_MTU_LENGTH, mtuLen);
+                return true;
+            } else if (preference == mBlePrefixPref) {
+                String prefix = newValue.toString();
+                mBlePrefixPref.setSummary(prefix);
+                mApp.settingsPut(KEY_BLE_PREFIX, prefix);
+                return true;
             }
+
             return false;
         }
-
-        // Fragment end
-    }
-}
+    }  // Fragment end
+} // Activity end

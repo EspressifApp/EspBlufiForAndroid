@@ -7,6 +7,10 @@
             android:inputType="number"
             android:key="@string/settings_mtu_length_key"
             android:title="@string/settings_mtu_length_title" />
+        <EditTextPreference
+            android:hint="@string/settings_ble_prefix_hint"
+            android:key="@string/settings_ble_prefix_key"
+            android:title="@string/settings_ble_prefix_title" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="@string/settings_category_version_title">

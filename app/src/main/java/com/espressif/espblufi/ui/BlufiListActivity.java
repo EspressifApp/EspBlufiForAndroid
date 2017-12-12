@@ -8,8 +8,7 @@ import android.graphics.Color;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.HandlerThread;
-import android.os.Looper;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBar;
@@ -30,22 +29,27 @@ import android.widget.Toast;
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BlufiApp;
 import com.espressif.espblufi.constants.BlufiConstants;
+import com.espressif.espblufi.constants.SettingsConstants;
 import com.espressif.libs.app.PermissionHelper;
+import com.espressif.libs.ble.EspBleHelper;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
+import rx.schedulers.Schedulers;
 
 public class BlufiListActivity extends BlufiAbsActivity {
-    private static final int TIMEOUT_SCAN = 5;
+    private static final long SCAN_LEAST_TIME = 5000L;
+    private static final long SCAN_TIMEOUT = 2500L;
 
     private static final int REQUEST_PERMISSION = 1;
     private static final int REQUEST_SETTINGS = 0x10;
@@ -55,85 +59,32 @@ public class BlufiListActivity extends BlufiAbsActivity {
     private SwipeRefreshLayout mRefreshLayout;
 
     private BTAdapter mBTAdapter;
-    private List<EspBleDevice> mBTList;
+    private List<EspBleDevice> mBleList;
 
     private View mButtonBar;
 
     private TextView mCheckCountTV;
 
-    private List<EspBleDevice> mTempDevices;
+    private String mBlufiFilter;
+    private HashSet<EspBleDevice> mTempDevices;
+    private long mScanPrevTime;
+    private long mScanStartTime;
 
-    private Looper mBackgroundLooper;
+    private volatile boolean mDestroy = false;
 
-    private BluetoothAdapter.LeScanCallback mBTCallback = new BluetoothAdapter.LeScanCallback() {
+    private EspBleHelper.ScanListener mBleListener = new EspBleHelper.ScanListener() {
 
         @Override
         public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
             String deviceName = device.getName();
-            if (deviceName == null || !deviceName.startsWith(BlufiConstants.BLUFI_PREFIX)) {
-                return;
+            if (deviceName != null && deviceName.startsWith(mBlufiFilter)) {
+                EspBleDevice newDevice = new EspBleDevice(device);
+                newDevice.rssi = rssi;
+                if (!mTempDevices.contains(newDevice)) {
+                    mTempDevices.add(newDevice);
+                    mScanPrevTime = SystemClock.elapsedRealtime();
+                }
             }
-
-            EspBleDevice newDevice = new EspBleDevice(device);
-            newDevice.rssi = rssi;
-            Observable.just(newDevice)
-                    .subscribeOn(AndroidSchedulers.from(mBackgroundLooper))
-                    .filter(nd -> {
-                        boolean exist = false;
-                        for (EspBleDevice td : mTempDevices) {
-                            if (td.equals(nd)) {
-                                td.rssi = nd.rssi;
-                                exist = true;
-                                break;
-                            }
-                        }
-
-                        if (!exist) {
-                            mTempDevices.add(nd);
-                        }
-
-                        return !exist;
-                    })
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe(new Subscriber<EspBleDevice>() {
-                        @Override
-                        public void onCompleted() {
-                        }
-
-                        @Override
-                        public void onError(Throwable e) {
-                        }
-
-                        @Override
-                        public void onNext(EspBleDevice nd) {
-                            if (!containBle(nd.device)) {
-                                int insert = mBTList.size();
-                                for (int i = 0; i < mBTList.size(); i++) {
-                                    EspBleDevice od = mBTList.get(i);
-                                    if (od.rssi < nd.rssi) {
-                                        insert = i;
-                                        break;
-                                    }
-                                }
-
-                                mBTList.add(insert, nd);
-                                mBTAdapter.notifyDataSetChanged();
-                            }
-                        }
-                    });
-        }
-    };
-
-    private Comparator<EspBleDevice> mBleComparator = (o1, o2) -> {
-        int i1 = o1.rssi;
-        int i2 = o2.rssi;
-
-        if (i1 < i2) {
-            return 1;
-        } else if (i1 == i2) {
-            return 0;
-        } else {
-            return -1;
         }
     };
 
@@ -158,7 +109,7 @@ public class BlufiListActivity extends BlufiAbsActivity {
 
         RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-        mBTList = new ArrayList<>();
+        mBleList = new LinkedList<>();
         mBTAdapter = new BTAdapter();
         mRecyclerView.setAdapter(mBTAdapter);
 
@@ -166,11 +117,7 @@ public class BlufiListActivity extends BlufiAbsActivity {
         mButtonBar.findViewById(R.id.button_bar_batch_configure).setOnClickListener(v -> batchConfigure());
         mButtonBar.findViewById(R.id.button_bar_all).setOnClickListener(v -> selectAll());
 
-        BackgroundThread backgroundThread = new BackgroundThread();
-        backgroundThread.start();
-        mBackgroundLooper = backgroundThread.getLooper();
-
-        mTempDevices = new ArrayList<>();
+        mTempDevices = new HashSet<>();
 
         mPermissionHelper = new PermissionHelper(this, REQUEST_PERMISSION);
         mPermissionHelper.setOnPermissionsListener((permission, permited) -> {
@@ -186,9 +133,8 @@ public class BlufiListActivity extends BlufiAbsActivity {
     protected void onDestroy() {
         super.onDestroy();
 
-        BluetoothAdapter.getDefaultAdapter().stopLeScan(mBTCallback);
-
-        mBackgroundLooper.quit();
+        EspBleHelper.stopScanBle(mBleListener);
+        mDestroy = true;
     }
 
     @Override
@@ -239,7 +185,7 @@ public class BlufiListActivity extends BlufiAbsActivity {
 
     private void selectAll() {
         boolean checkedAll = true;
-        for (EspBleDevice d : mBTList) {
+        for (EspBleDevice d : mBleList) {
             if (!d.checked) {
                 checkedAll = false;
                 break;
@@ -247,7 +193,7 @@ public class BlufiListActivity extends BlufiAbsActivity {
         }
 
         boolean actionCheck = !checkedAll;
-        for (EspBleDevice d : mBTList) {
+        for (EspBleDevice d : mBleList) {
             d.checked = actionCheck;
         }
 
@@ -258,7 +204,7 @@ public class BlufiListActivity extends BlufiAbsActivity {
 
     private void batchConfigure() {
         ArrayList<BluetoothDevice> bles = new ArrayList<>();
-        for (EspBleDevice ble : mBTList) {
+        for (EspBleDevice ble : mBleList) {
             if (ble.checked) {
                 bles.add(ble.device);
             }
@@ -271,6 +217,16 @@ public class BlufiListActivity extends BlufiAbsActivity {
             String rKey = BlufiApp.getInstance().putCache(bles);
             intent.putExtra(BlufiConstants.KEY_BLE_DEVICES, rKey);
             startActivityForResult(intent, REQUEST_SETTINGS);
+
+            for (BluetoothDevice dev : bles) {
+                for (EspBleDevice espDev : mBleList) {
+                    if (dev == espDev.device) {
+                        mBleList.remove(espDev);
+                        break;
+                    }
+                }
+            }
+            mBTAdapter.notifyDataSetChanged();
         }
     }
 
@@ -296,14 +252,78 @@ public class BlufiListActivity extends BlufiAbsActivity {
             }
         }
 
-        BluetoothAdapter.getDefaultAdapter().startLeScan(mBTCallback);
-        Observable.timer(TIMEOUT_SCAN, TimeUnit.SECONDS)
+        mTempDevices.clear();
+        mBlufiFilter = (String) BlufiApp.getInstance().settingsGet(SettingsConstants.PREF_SETTINGS_KEY_BLE_PREFIX, BlufiConstants.BLUFI_PREFIX);
+        mScanStartTime = mScanPrevTime = SystemClock.elapsedRealtime();
+        EspBleHelper.startScanBle(mBleListener);
+        Observable.just(new LinkedList<EspBleDevice>())
+                .subscribeOn(Schedulers.io())
+                .doOnNext(new Action1<LinkedList<EspBleDevice>>() {
+                    @Override
+                    public void call(LinkedList<EspBleDevice> scanResults) {
+                        while (!mDestroy) {
+                            try {
+                                Thread.sleep(1000L);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                                return;
+                            }
+
+                            long currentTime = SystemClock.elapsedRealtime();
+                            long cost = currentTime - mScanStartTime;
+                            if (cost > SCAN_LEAST_TIME && currentTime - mScanPrevTime > SCAN_TIMEOUT) {
+                                // Scan Over
+                                EspBleHelper.stopScanBle(mBleListener);
+                                for (EspBleDevice newBle : mTempDevices) {
+                                    for (EspBleDevice ble : mBleList) {
+                                        if (ble.equals(newBle)) {
+                                            newBle.checked = ble.checked;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // Sort by rssi
+                                scanResults.addAll(mTempDevices);
+                                mTempDevices.clear();
+                                Collections.sort(scanResults, new Comparator<EspBleDevice>() {
+                                    @Override
+                                    public int compare(EspBleDevice o1, EspBleDevice o2) {
+                                        if (o1.rssi < o2.rssi) {
+                                            return 1;
+                                        } else if (o1.rssi == o2.rssi) {
+                                            return 0;
+                                        } else {
+                                            return -1;
+                                        }
+                                    }
+                                });
+
+                                break;
+                            } else {
+                                // Scan continue
+                                if (mBleList.size() != mTempDevices.size()) {
+                                    // Refresh scan results every one second
+                                    Observable.unsafeCreate(new Observable.OnSubscribe<Object>() {
+                                        @Override
+                                        public void call(Subscriber<? super Object> subscriber) {
+                                            mBleList.clear();
+                                            mBleList.addAll(mTempDevices);
+                                            mBTAdapter.notifyDataSetChanged();
+                                            subscriber.onCompleted();
+                                        }
+                                    }).subscribeOn(AndroidSchedulers.mainThread())
+                                            .subscribe();
+                                }
+                            }
+                        }
+                    }
+                })
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<Long>() {
+                .subscribe(new Subscriber<LinkedList<EspBleDevice>>() {
                     @Override
                     public void onCompleted() {
-                        BluetoothAdapter.getDefaultAdapter().stopLeScan(mBTCallback);
-                        removeGarbageDevices();
+                        System.out.println("Ble scan task over");
                     }
 
                     @Override
@@ -311,25 +331,21 @@ public class BlufiListActivity extends BlufiAbsActivity {
                     }
 
                     @Override
-                    public void onNext(Long aLong) {
+                    public void onNext(LinkedList<EspBleDevice> espBleDevices) {
+                        if (!mDestroy) {
+                            mBleList.clear();
+                            mBleList.addAll(espBleDevices);
+                            mBTAdapter.notifyDataSetChanged();
+                            mRefreshLayout.setRefreshing(false);
+                        }
                     }
                 });
     }
 
     private void clearBleChecked() {
-        for (EspBleDevice ble : mBTList) {
+        for (EspBleDevice ble : mBleList) {
             ble.checked = false;
         }
-    }
-
-    private boolean containBle(BluetoothDevice device) {
-        for (EspBleDevice ble : mBTList) {
-            if (ble.device.equals(device)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private void setCheckMode(boolean checkMode) {
@@ -344,82 +360,13 @@ public class BlufiListActivity extends BlufiAbsActivity {
 
     private void updateSelectDeviceCountInfo() {
         int count = 0;
-        for (EspBleDevice d : mBTList) {
+        for (EspBleDevice d : mBleList) {
             if (d.checked) {
                 count++;
             }
         }
 
         mCheckCountTV.setText(getString(R.string.esp_blufi_list_selected_device_info, count));
-    }
-
-    private void removeGarbageDevices() {
-        for (int i = mBTList.size() - 1; i >= 0; i--) {
-            BluetoothDevice device = mBTList.get(i).device;
-            for (int j = i - 1; j >= 0; j--) {
-                BluetoothDevice compareDevice = mBTList.get(j).device;
-                if (device.equals(compareDevice)) {
-                    mBTList.remove(i);
-                    mBTAdapter.notifyItemRemoved(i);
-                    break;
-                }
-            }
-        }
-
-        List<EspBleDevice> bleList = new ArrayList<>();
-        bleList.addAll(mBTList);
-        final List<EspBleDevice> removeDevices = new LinkedList<>();
-        Observable.from(bleList)
-                .subscribeOn(AndroidSchedulers.from(mBackgroundLooper))
-                .doOnNext(ble -> {
-                    boolean contains = false;
-                    for (EspBleDevice td : mTempDevices) {
-                        if (ble.equals(td)) {
-                            ble.rssi = td.rssi;
-                            contains = true;
-                            break;
-                        }
-                    }
-                    if (!contains) {
-                        removeDevices.add(ble);
-                    }
-                })
-                .doOnCompleted(() -> mTempDevices.clear())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<EspBleDevice>() {
-                    @Override
-                    public void onCompleted() {
-                        for (EspBleDevice removeDevice : removeDevices) {
-                            int position = mBTList.indexOf(removeDevice);
-                            if (position >= 0) {
-                                mBTList.remove(position);
-                            }
-                        }
-
-                        Collections.sort(mBTList, mBleComparator);
-                        mBTAdapter.notifyDataSetChanged();
-                        mRefreshLayout.setRefreshing(false);
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-                        e.printStackTrace();
-                    }
-
-                    @Override
-                    public void onNext(EspBleDevice bluetoothDevice) {
-                    }
-                });
-    }
-
-    private boolean sameBle(BluetoothDevice d1, BluetoothDevice d2) {
-        return d1 != null && d2 != null && d1.getAddress().equalsIgnoreCase(d2.getAddress());
-    }
-
-    private static class BackgroundThread extends HandlerThread {
-        BackgroundThread() {
-            super("Bluetooth-Update-BackgroundThread", android.os.Process.THREAD_PRIORITY_BACKGROUND);
-        }
     }
 
     private class EspBleDevice {
@@ -442,6 +389,11 @@ public class BlufiListActivity extends BlufiAbsActivity {
             }
 
             return device.equals(((EspBleDevice) obj).device);
+        }
+
+        @Override
+        public int hashCode() {
+            return device.hashCode();
         }
     }
 
@@ -507,7 +459,7 @@ public class BlufiListActivity extends BlufiAbsActivity {
 
         @Override
         public void onBindViewHolder(BTHolder holder, int position) {
-            holder.ble = mBTList.get(position);
+            holder.ble = mBleList.get(position);
 
             String name = holder.ble.device.getName();
             if (TextUtils.isEmpty(name)) {
@@ -527,7 +479,7 @@ public class BlufiListActivity extends BlufiAbsActivity {
 
         @Override
         public int getItemCount() {
-            return mBTList.size();
+            return mBleList.size();
         }
 
         void setCheckable(boolean checkable) {

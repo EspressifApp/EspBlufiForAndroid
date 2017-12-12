@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import rx.Observable;
@@ -55,6 +56,10 @@ public class BlufiSettingsActivity extends BlufiAbsActivity implements AdapterVi
             IBlufiCommunicator.SOFTAP_SECURITY_WPA2,
             IBlufiCommunicator.SOFTAP_SECURITY_WPA_WPA2
     };
+
+    private static final String PREF_AP = "blufi_conf_aps";
+
+    private EspLog EspLog = new EspLog(getClass());
 
     private Spinner mDeviceModeSp;
     private Spinner mMultithreadSp;
@@ -82,12 +87,16 @@ public class BlufiSettingsActivity extends BlufiAbsActivity implements AdapterVi
     private List<String> mAutoCompleteSSIDs;
     private ArrayAdapter<String> mAutoCompleteSSIDAdapter;
 
+    private SharedPreferences mApPref;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.blufi_settings_activity);
 
         mWifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
+
+        mApPref = getSharedPreferences(PREF_AP, MODE_PRIVATE);
 
         mBatchKey = getIntent().getStringExtra(BlufiConstants.KEY_BLE_DEVICES);
 
@@ -131,9 +140,24 @@ public class BlufiSettingsActivity extends BlufiAbsActivity implements AdapterVi
         });
         mStationPasswordET = (EditText) findViewById(R.id.station_wifi_password);
         findViewById(R.id.station_wifi_scan).setOnClickListener(v -> scanWifi());
-        mStationSsidET.setText(getConnectionSSID());
         mAutoCompleteSSIDAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, mAutoCompleteSSIDs);
         mStationSsidET.setAdapter(mAutoCompleteSSIDAdapter);
+        mStationSsidET.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String pwd = mApMap.get(s.toString());
+                mStationPasswordET.setText(pwd);
+            }
+        });
+        mStationSsidET.setText(getConnectionSSID());
 
         SharedPreferences shared = getSharedPreferences(BlufiConstants.PREF_MESH_IDS_NAME, MODE_PRIVATE);
         Set<String> bssidSet = shared.getAll().keySet();
@@ -192,11 +216,11 @@ public class BlufiSettingsActivity extends BlufiAbsActivity implements AdapterVi
     }
 
     private void loadAPs() {
-//        List<IApDB> aps = EspDBManager.getInstance().ap().loadAps();
-//        for (IApDB ap : aps) {
-//            mApMap.put(ap.getSsid(), ap.getPassword());
-//            mAutoCompleteSSIDs.add(ap.getSsid());
-//        }
+        Map<String, ?> aps = mApPref.getAll();
+        for (Map.Entry<String, ?> entry : aps.entrySet()) {
+            mApMap.put(entry.getKey(), entry.getValue().toString());
+            mAutoCompleteSSIDs.add(entry.getKey());
+        }
     }
 
     @Override
@@ -457,8 +481,23 @@ public class BlufiSettingsActivity extends BlufiAbsActivity implements AdapterVi
         intent.putExtra(BlufiConstants.KEY_CONFIGURE_PARAM, params);
         intent.putExtra(BlufiConstants.KEY_CONFIGURE_MULTITHREAD, multithread);
 
+        saveAP(params);
+
         startActivity(intent);
         setResult(RESULT_OK);
         finish();
+    }
+
+    private void saveAP(BlufiConfigureParams params) {
+        switch (params.getOpMode()) {
+            case IBlufiCommunicator.OP_MODE_STA:
+            case IBlufiCommunicator.OP_MODE_STASOFTAP:
+                String ssid = params.getStaSSID();
+                String pwd = params.getStaPassword();
+                mApPref.edit().putString(ssid, pwd).apply();
+                break;
+            default:
+                break;
+        }
     }
 }
