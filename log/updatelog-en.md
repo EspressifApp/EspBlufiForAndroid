@@ -1,5 +1,12 @@
 # Update Log
 
+## v1.2.4
+- Optimizing the scanning of BLE devices
+- Set ble device name prefix filter in Settings
+- Add configure print
+- Save configured AP password
+- Add function getStatus() in class BlufiCommunicator
+
 ## v1.2.3
 - Cancel connect ble when select the device
 - Add configure station option: Wait connect response
