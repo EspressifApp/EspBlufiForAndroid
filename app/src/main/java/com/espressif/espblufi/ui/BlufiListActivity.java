@@ -43,6 +43,7 @@ import java.util.Locale;
 
 import rx.Observable;
 import rx.Subscriber;
+import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.functions.Action1;
 import rx.schedulers.Schedulers;
@@ -65,6 +66,7 @@ public class BlufiListActivity extends BlufiAbsActivity {
 
     private TextView mCheckCountTV;
 
+    private Subscription mScanTask;
     private String mBlufiFilter;
     private HashSet<EspBleDevice> mTempDevices;
     private long mScanPrevTime;
@@ -174,11 +176,8 @@ public class BlufiListActivity extends BlufiAbsActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
             case REQUEST_SETTINGS:
-                switch (resultCode) {
-                    case RESULT_OK:
-                        scan();
-                        break;
-                }
+                mRefreshLayout.setRefreshing(true);
+                scan();
                 break;
         }
     }
@@ -218,14 +217,13 @@ public class BlufiListActivity extends BlufiAbsActivity {
             intent.putExtra(BlufiConstants.KEY_BLE_DEVICES, rKey);
             startActivityForResult(intent, REQUEST_SETTINGS);
 
-            for (BluetoothDevice dev : bles) {
-                for (EspBleDevice espDev : mBleList) {
-                    if (dev == espDev.device) {
-                        mBleList.remove(espDev);
-                        break;
-                    }
-                }
+            if (mScanTask != null) {
+                mScanTask.unsubscribe();
             }
+            EspBleHelper.stopScanBle(mBleListener);
+            mRefreshLayout.setRefreshing(false);
+            mTempDevices.clear();
+            mBleList.clear();
             mBTAdapter.notifyDataSetChanged();
         }
     }
@@ -252,16 +250,21 @@ public class BlufiListActivity extends BlufiAbsActivity {
             }
         }
 
+        mBleList.clear();
+        mBTAdapter.notifyDataSetChanged();
         mTempDevices.clear();
         mBlufiFilter = (String) BlufiApp.getInstance().settingsGet(SettingsConstants.PREF_SETTINGS_KEY_BLE_PREFIX, BlufiConstants.BLUFI_PREFIX);
         mScanStartTime = mScanPrevTime = SystemClock.elapsedRealtime();
         EspBleHelper.startScanBle(mBleListener);
-        Observable.just(new LinkedList<EspBleDevice>())
+        mScanTask = Observable.just(new LinkedList<EspBleDevice>())
                 .subscribeOn(Schedulers.io())
                 .doOnNext(new Action1<LinkedList<EspBleDevice>>() {
                     @Override
                     public void call(LinkedList<EspBleDevice> scanResults) {
                         while (!mDestroy) {
+                            if (Thread.currentThread().isInterrupted()) {
+                                return;
+                            }
                             try {
                                 Thread.sleep(1000L);
                             } catch (InterruptedException e) {

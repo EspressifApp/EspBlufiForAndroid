@@ -1,5 +1,8 @@
 # Update Log
 
+## v1.2.5
+- Add function closeConnection() in class BlufiCommunicator
+
 ## v1.2.4
 - Optimizing the scanning of BLE devices
 - Set ble device name prefix filter in Settings

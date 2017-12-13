@@ -249,9 +249,18 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        release();
+        super.onBackPressed();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
+        release();
+    }
 
+    private void release() {
         mDestroy = true;
         mAllDevices.clear();
         for (Subscription s : mSubs) {
@@ -273,6 +282,9 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
         }
 
         void close() {
+            if (communicator != null) {
+                communicator.closeConnection();
+            }
             if (mBleHelper != null) {
                 mBleHelper.close();
             }
@@ -282,6 +294,10 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
             EspLog.d("BLE task start");
             ConfigureResult result = new ConfigureResult();
             result.msg.append("Start configure.\n");
+
+            if (mDestroy) {
+                return result;
+            }
 
             mBleHelper = new EspBleHelper(getApplicationContext());
             boolean connect;
@@ -295,6 +311,10 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
             }
             EspLog.d("BLE task connect suc");
             result.msg.append("-Connect success.\n");
+
+            if (mDestroy) {
+                return result;
+            }
 
             service = mBleHelper.discoverService(BlufiConstants.UUID_WIFI_SERVICE);
             if (service == null) {
@@ -320,6 +340,12 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
             }
             result.msg.append("-Discover notification characteristic success.\n");
 
+            communicator = new BlufiCommunicator(mBleHelper, send, recv);
+            if (mDestroy) {
+                communicator.closeConnection();
+                return result;
+            }
+
             SharedPreferences shared = getSharedPreferences(SettingsConstants.PREF_SETTINGS_NAME, MODE_PRIVATE);
             int mtuLen = shared.getInt(SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -331,7 +357,11 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
             }
             EspLog.d("BLE task mtu suc");
 
-            communicator = new BlufiCommunicator(mBleHelper, send, recv);
+            if (mDestroy) {
+                communicator.closeConnection();
+                return result;
+            }
+
             communicator.setPostPackageLengthLimit(mtuLen - BlufiConstants.POST_DATA_LENGTH_LESS);
 
             BlufiSecurityResult negsec = communicator.negotiateSecurity();
@@ -358,6 +388,11 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
                     return result;
             }
 
+            if (mDestroy) {
+                communicator.closeConnection();
+                return result;
+            }
+
             BlufiStatusResponse statusResp;
             final int opMode = mParam.getOpMode();
             switch (opMode) {
@@ -382,10 +417,20 @@ public class BlufiConfigureActivity extends BlufiAbsActivity {
                     break;
             }
 
+            if (mDestroy) {
+                communicator.closeConnection();
+                return result;
+            }
+
             mParam.setMeshRoot(mRootDevice == device);
             mParam.setConfigureSequence(mAllDevices.indexOf(device));
             BlufiStatusResponse confResp = communicator.configure(mParam);
             EspLog.d("BLE task config suc");
+
+            if (mDestroy) {
+                communicator.closeConnection();
+                return result;
+            }
 
             switch (confResp.getResultCode()) {
                 case BlufiStatusResponse.RESULT_SUCCESS:
