@@ -1,5 +1,11 @@
 # 更新日志
 
+## v1.2.6
+- 类BlufiCommunicator增加接口
+- 获取Blufi设备扫描到的wifi列表，调用 getWifiList()
+- APP向设备发送自定义数据，调用 postCustomData(byte[] data)
+- APP获取设备推送的自定义数据，调用 receiveCustomdata(long timeout)
+
 ## v1.2.5
 - 类BlufiCommunicator增加通知Blufi断开连接的接口
 

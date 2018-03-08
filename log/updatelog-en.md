@@ -1,5 +1,11 @@
 # Update Log
 
+## v1.2.6
+- Add some functions in class BlufiCommunicator
+- Get blufi device scanned wifi list, call getWifiList()
+- APP post custom data, call postCustomData(byte[] data)
+- APP receive custom notification from device, call receiveCustomdata(long timeout)
+
 ## v1.2.5
 - Add function closeConnection() in class BlufiCommunicator
 
