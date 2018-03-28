@@ -51,7 +51,7 @@ public class BlufiSettingsActivity extends BlufiAbsActivity implements AdapterVi
     };
     private static final int[] SOFTAP_SECURITY_VALUES = {
             IBlufiCommunicator.SOFTAP_SECURITY_OPEN,
-            IBlufiCommunicator.SOFTAP_SECURITY_WEP,
+//            IBlufiCommunicator.SOFTAP_SECURITY_WEP,
             IBlufiCommunicator.SOFTAP_SECURITY_WPA,
             IBlufiCommunicator.SOFTAP_SECURITY_WPA2,
             IBlufiCommunicator.SOFTAP_SECURITY_WPA_WPA2

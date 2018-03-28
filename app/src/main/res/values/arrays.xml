@@ -7,7 +7,6 @@
     </string-array>
     <string-array name="esp_blufi_configure_softap_security">
         <item>Open</item>
-        <item>WEP</item>
         <item>WPA PSK</item>
         <item>WPA2 PSK</item>
         <item>WPA WAP2 PSK</item>
