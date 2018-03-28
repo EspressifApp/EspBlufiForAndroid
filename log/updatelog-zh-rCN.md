@@ -1,5 +1,8 @@
 # 更新日志
 
+## v1.2.7
+- ESP-IDF不支持SoftAP WEP加密, 去除相关选项
+
 ## v1.2.6
 - 类BlufiCommunicator增加接口
 - 获取Blufi设备扫描到的wifi列表，调用 getWifiList()

@@ -1,5 +1,8 @@
 # Update Log
 
+## v1.2.7
+- ESP-IDF don't support SoftAP security WEP, remove the options
+
 ## v1.2.6
 - Add some functions in class BlufiCommunicator
 - Get blufi device scanned wifi list, call getWifiList()
