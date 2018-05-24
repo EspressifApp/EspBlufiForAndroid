@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context=".ui.BlufiActivity"
+    tools:showIn="@layout/blufi_activity">
+
+    <android.support.v7.widget.GridLayout
+        android:id="@+id/grid_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        app:columnCount="4"
+        app:rowCount="2">
+        <!-- First Line -->
+        <Button
+            android:id="@+id/blufi_connect"
+            style="@style/BlufiActivityButtonBarButton"
+            android:text="@string/blufi_function_connect"
+            app:layout_columnWeight="1"
+            app:layout_rowWeight="1" />
+
+        <Button
+            android:id="@+id/blufi_disconnect"
+            style="@style/BlufiActivityButtonBarButton"
+            android:text="@string/blufi_function_disconnect"
+            app:layout_columnWeight="1"
+            app:layout_rowWeight="1" />
+
+        <Button
+            android:id="@+id/blufi_security"
+            style="@style/BlufiActivityButtonBarButton"
+            android:text="@string/blufi_function_security"
+            app:layout_columnWeight="1"
+            app:layout_rowWeight="1" />
+
+        <Button
+            android:id="@+id/blufi_version"
+            style="@style/BlufiActivityButtonBarButton"
+            android:text="@string/blufi_function_version"
+            app:layout_columnWeight="1"
+            app:layout_rowWeight="1" />
+        <!-- Second Line -->
+        <Button
+            android:id="@+id/blufi_configure"
+            style="@style/BlufiActivityButtonBarButton"
+            android:text="@string/blufi_function_configure"
+            app:layout_columnWeight="1"
+            app:layout_rowWeight="1" />
+
+        <Button
+            android:id="@+id/blufi_device_status"
+            style="@style/BlufiActivityButtonBarButton"
+            android:text="@string/blufi_function_device_status"
+            app:layout_columnWeight="1"
+            app:layout_rowWeight="1" />
+
+        <Button
+            android:id="@+id/blufi_device_scan"
+            style="@style/BlufiActivityButtonBarButton"
+            android:text="@string/blufi_function_device_scan"
+            app:layout_columnWeight="1"
+            app:layout_rowWeight="1" />
+
+        <Button
+            android:id="@+id/blufi_custom"
+            style="@style/BlufiActivityButtonBarButton"
+            android:text="@string/blufi_function_custom"
+            app:layout_columnWeight="1"
+            app:layout_rowWeight="1" />
+    </android.support.v7.widget.GridLayout>
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@id/grid_layout"
+        android:layout_alignParentTop="true"
+        android:orientation="vertical"
+        app:layoutManager="android.support.v7.widget.LinearLayoutManager"
+        app:reverseLayout="false" />
+
+</RelativeLayout>

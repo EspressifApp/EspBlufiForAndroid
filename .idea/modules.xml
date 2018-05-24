@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/EspBlufiRelease.iml" filepath="$PROJECT_DIR$/EspBlufiRelease.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/apptools/apptools.iml" filepath="$PROJECT_DIR$/apptools/apptools.iml" />
     </modules>
   </component>
 </project>

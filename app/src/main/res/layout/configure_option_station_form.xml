@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/station_wifi_form"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_marginTop="20dp"
+    android:orientation="vertical"
+    android:visibility="gone">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/configure_station_sel_wifi" />
+
+    <LinearLayout
+        android:id="@+id/station_wifi_ssid_form"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        android:orientation="horizontal">
+
+        <android.support.design.widget.TextInputLayout
+            android:layout_width="0dip"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            app:passwordToggleEnabled="true">
+
+            <AutoCompleteTextView
+                android:id="@+id/station_ssid"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/configure_station_ssid"
+                android:singleLine="true" />
+
+        </android.support.design.widget.TextInputLayout>
+
+        <ImageButton
+            android:id="@+id/station_wifi_scan"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/configure_refresh_icon" />
+    </LinearLayout>
+
+    <android.support.design.widget.TextInputLayout
+        android:id="@+id/station_wifi_password_form"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="15dp"
+        app:passwordToggleEnabled="true">
+
+        <EditText
+            android:id="@+id/station_wifi_password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/configure_station_password"
+            android:inputType="textPassword"
+            android:singleLine="true" />
+
+    </android.support.design.widget.TextInputLayout>
+</LinearLayout>

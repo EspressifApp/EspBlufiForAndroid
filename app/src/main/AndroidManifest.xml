@@ -17,8 +17,9 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name=".ui.BlufiListActivity"
-            android:screenOrientation="portrait">
+            android:name=".ui.MainActivity"
+            android:label="@string/main_title"
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -26,17 +27,18 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ui.BlufiSettingsActivity"
-            android:label="@string/esp_blufi_settings_title"
-            android:screenOrientation="portrait" />
+            android:name=".ui.BlufiActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
-            android:name=".ui.BlufiConfigureActivity"
-            android:label="@string/esp_blufi_configure_title"
-            android:screenOrientation="portrait" />
+            android:name=".ui.ConfigureOptionsActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".ui.SettingsActivity"
             android:label="@string/settings_title"
-            android:screenOrientation="portrait" />
+            android:screenOrientation="portrait"
+            android:theme="@style/AppTheme.NoActionBar" />
     </application>
 
 </manifest>

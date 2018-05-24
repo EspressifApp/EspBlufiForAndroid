@@ -5,11 +5,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 
 import com.espressif.espblufi.constants.SettingsConstants;
-import com.espressif.libs.utils.RandomUtil;
 
 import java.util.HashMap;
 import java.util.Random;
 import java.util.Set;
+
+import libs.espressif.utils.RandomUtil;
 
 public class BlufiApp extends Application {
     private static BlufiApp instance;

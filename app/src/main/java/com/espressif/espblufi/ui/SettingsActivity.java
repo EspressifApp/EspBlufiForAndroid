@@ -9,23 +9,28 @@ import android.preference.Preference;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
 import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 
-import com.esp.iot.blufi.communiation.BlufiProtocol;
 import com.espressif.espblufi.R;
+import com.espressif.espblufi.app.BaseActivity;
 import com.espressif.espblufi.app.BlufiApp;
 import com.espressif.espblufi.constants.BlufiConstants;
 import com.espressif.espblufi.constants.SettingsConstants;
 
 import java.util.Locale;
 
-public class SettingsActivity extends AppCompatActivity {
+import blufi.espressif.BlufiUtils;
+
+public class SettingsActivity extends BaseActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.settings_activity);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        setHomeAsUpEnable(true);
 
         getFragmentManager().beginTransaction().replace(R.id.frame, new BlufiSettingsFragment()).commit();
     }
@@ -48,11 +53,11 @@ public class SettingsActivity extends AppCompatActivity {
             mApp = BlufiApp.getInstance();
 
             findPreference(getString(R.string.settings_version_key)).setSummary(getVersionName());
-
-            String supportProtocolVersion = String.format(Locale.ENGLISH,
-                    "%d.%d",
-                    BlufiProtocol.SUPPORT_PROTOCOL_VERSION[0], BlufiProtocol.SUPPORT_PROTOCOL_VERSION[1]);
+            findPreference(getString(R.string.settings_blufi_version_key)).setSummary(BlufiUtils.VERSION);
+            String supportProtocolVersion = String.format(Locale.ENGLISH, "%d.%d",
+                    BlufiUtils.SUPPORT_BLUFI_VERSION[0], BlufiUtils.SUPPORT_BLUFI_VERSION[1]);
             findPreference(getString(R.string.settings_support_protocol_key)).setSummary(supportProtocolVersion);
+
 
             mMtuPref = (EditTextPreference) findPreference(getString(R.string.settings_mtu_length_key));
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
