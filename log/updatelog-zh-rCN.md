@@ -1,5 +1,10 @@
 # 更新日志
 
+## v1.3.0
+- 新交互UI
+- 重构Blufi接口, 设备信息推送实用监听回调
+- 类BlufiClient的用法详见类BlufiActivity
+
 ## v1.2.7
 - ESP-IDF不支持SoftAP WEP加密, 去除相关选项
 

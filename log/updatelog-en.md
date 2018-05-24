@@ -1,5 +1,10 @@
 # Update Log
 
+## v1.3.0
+- New UI
+- New Blufi lib interface. See class BlufiClient
+- Usage of class BlufiClient see class BlufiActivity
+
 ## v1.2.7
 - ESP-IDF don't support SoftAP security WEP, remove the options
 
