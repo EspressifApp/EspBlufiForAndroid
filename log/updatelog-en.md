@@ -1,5 +1,8 @@
 # Update Log
 
+## v1.3.1
+- Fix some bugs
+
 ## v1.3.0
 - New UI
 - New Blufi lib interface. See class BlufiClient
