@@ -7,8 +7,6 @@ public class EspHttpParams {
     private boolean mRequireResponse = true;
     private boolean mTrustAllCerts = false;
 
-    private int mPostCount;
-
     /**
      * Get the connect timeout milliseconds
      *
@@ -85,13 +83,5 @@ public class EspHttpParams {
 
     public void setTrustAllCerts(boolean trustAllCerts) {
         mTrustAllCerts = trustAllCerts;
-    }
-
-    public int getPostCount() {
-        return mPostCount;
-    }
-
-    public void setPostCount(int postCount) {
-        mPostCount = postCount;
     }
 }
