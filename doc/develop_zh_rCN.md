@@ -60,7 +60,7 @@ public void onNegotiateSecurityResult(BlufiClient client, int status) {
 }
 ```
 
-- 请求获取设备版本
+- 请求获取 Device 版本
 ```java
 client.requestDeviceVersion();
 ```
@@ -79,7 +79,7 @@ public void onDeviceVersionResponse(BlufiClient client, int status, BlufiVersion
 }
 ```
 
-- 请求获取设备当前扫描到的Wifi信号
+- 请求获取 Device 当前扫描到的Wifi信号
 ```java
 client.requestDeviceWifiScan();
 ```
@@ -107,26 +107,27 @@ byte[] data = "Custom Data".getBytes();
 client.postCustomData(data);
 ```
 ```java
-// 自定义发送结果在 BlufiCallback 回调方法内通知
+// 自定义数据发送结果在 BlufiCallback 回调方法内通知
 @Override
 public void onPostCustomDataResult(BlufiClient client, int status, byte[] data) {
     // status 为 0 表示发送成功, 否则为发送失败
     // data 为需要发送的自定义数据
 }
 
-// 受到设备端发送的自定义数据
+// 收到 Device 端发送的自定义数据
 @Override
 public void onReceiveCustomData(BlufiClient client, int status, byte[] data) {
     // status 为 0 表示成功接收
+    // data 为收到的数据
 }
 ```
 
-- 请求获取设备当前状态
+- 请求获取 Device 当前状态
 ```java
 client.requestDeviceStatus();
 ```
 ```java
-// 设备状态在 BlufiCallback 回调方法内通知
+// Device 状态在 BlufiCallback 回调方法内通知
 @Override
 public void onDeviceStatusResponse(BlufiClient client, int status, BlufiStatusResponse response) {
     // status 为 0 表示获取状态成功, 否则为失败
@@ -157,7 +158,7 @@ public void onDeviceStatusResponse(BlufiClient client, int status, BlufiStatusRe
 }
 ```
 
-- 对设备进行配网
+- 对 Device 进行配网
 ```java
 BlufiConfigureParams params = new BlufiConfigureParams();
 int opMode = // 设置需要配置的模式: 1 为Station模式, 2 为 SoftAP模式, 3为Station模式和SoftAP共存模式
@@ -166,7 +167,7 @@ if (opMode == BlufiParameter.OP_MODE_STA) {
     // 设置Station配置信息
     params.setStaSSID(ssid); // 设置Wifi SSID
     params.setStaPassword(password); // 设置Wifi密码, 若是开放Wifi则不设或设空
-    // 注意: 设备不支持连接5G Wifi, 建议做检查
+    // 注意: Device 不支持连接5G Wifi, 建议做检查
 } else if (opMode == BlufiParameter.OP_MODE_SOFTAP) {
     // 设置SoftAP配置信息
     params.setSoftAPSSID(ssid); // 设置Device的SSID
