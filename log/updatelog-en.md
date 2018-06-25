@@ -1,5 +1,9 @@
 # Update Log
 
+## 6/25/2018
+- Blufi source code opened, see module blufilibrary
+- Delete BlufiCommunicator
+
 ## v1.3.1
 - Fix some bugs
 

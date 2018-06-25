@@ -1,5 +1,9 @@
 # 更新日志
 
+## 2018/6/25
+- Blufi通信库开源, 见模块blufilibrary
+- 删除BlufiCommunicator
+
 ## v1.3.1
 - 修复一些bug
 
