@@ -32,10 +32,10 @@ public class SettingsActivity extends BaseActivity {
         setSupportActionBar(toolbar);
         setHomeAsUpEnable(true);
 
-        getFragmentManager().beginTransaction().replace(R.id.frame, new BlufiSettingsFragment()).commit();
+        getFragmentManager().beginTransaction().replace(R.id.frame, new SettingsFragment()).commit();
     }
 
-    public static class BlufiSettingsFragment extends PreferenceFragment implements Preference.OnPreferenceChangeListener {
+    public static class SettingsFragment extends PreferenceFragment implements Preference.OnPreferenceChangeListener {
         private static final String KEY_MTU_LENGTH = SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH;
         private static final String KEY_BLE_PREFIX = SettingsConstants.PREF_SETTINGS_KEY_BLE_PREFIX;
 
