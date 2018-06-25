@@ -102,6 +102,9 @@ public class EspHttpUtils {
         }
 
         for (int i = 0; i < tryCount; i++) {
+            if (Thread.currentThread().isInterrupted()) {
+                return null;
+            }
             HttpURLConnection connection = createURLConnection(url, method, params, headers);
             response = executeHttpRequest(connection, content, requireResp);
             if (connection != null) {
@@ -250,7 +253,12 @@ public class EspHttpUtils {
 
         // Get http content
         LinkedList<Byte> contentList = new LinkedList<>();
-        InputStream is = connection.getInputStream();
+        InputStream is;
+        if (code >= 200 && code < 300) {
+            is = connection.getInputStream();
+        } else {
+            is = connection.getErrorStream();
+        }
         try {
             for (int data = is.read(); data != -1; data = is.read()) {
                 contentList.add((byte) data);

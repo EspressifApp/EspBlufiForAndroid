@@ -42,7 +42,7 @@ public class DataUtil {
      * Convert a hex format byte string to a byte array.
      */
     public static byte[] byteStringToBytes(String string) {
-        if (string.length() < 2) {
+        if (string.length() % 2 != 0) {
             string = "0" + string;
         }
         byte[] result = new byte[string.length() / 2];
@@ -58,8 +58,8 @@ public class DataUtil {
     public static String bytesToString(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
-            String bstr = String.format(Locale.ENGLISH, "%02x", b);
-            sb.append(bstr);
+            String byteStr = String.format(Locale.ENGLISH, "%02x", b);
+            sb.append(byteStr);
         }
         return sb.toString();
     }
