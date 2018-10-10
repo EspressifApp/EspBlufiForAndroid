@@ -1,3 +1,5 @@
+[[cn]](Introduction_to_the_EspBlufi_API_Interface_for_Android__cn.md)
+
 # Introduction to the EspBlufi API Interface for Android
 ------
 This guide is a basic introduction to the APIs provided by Espressif to facilitate the customers' secondary development of BluFi.
