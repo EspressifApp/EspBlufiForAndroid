@@ -27,6 +27,9 @@
     <string name="configure_station_ssid">Wifi ssid</string>
     <string name="configure_station_ssid_error">Wifi ssid can\'t be empty</string>
     <string name="configure_station_wifi_5g_error">The device does not support 5G Wifi</string>
+    <string name="configure_station_wifi_5g_dialog_message">The device does not support 5G Wifi, continue to configure?</string>
+    <string name="configure_station_wifi_5g_dialog_continue">Continue</string>
+    <string name="configure_station_wifi_5g_dialog_cancel">Cancel</string>
     <string name="configure_station_password">Wifi password</string>
     <string name="configure_station_wifi_scanning">Scanning wifi…</string>
     <string name="configure_station_wifi_scanning_nothing">Found no WIFI</string>

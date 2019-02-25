@@ -157,63 +157,63 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     void requestDeviceVersion() {
-        mThreadPool.submit(new Runnable() {
+        mThreadPool.submit(new ThrowableRunnable() {
             @Override
-            public void run() {
+            void execute() {
                 __requestDeviceVersion();
             }
         });
     }
 
     void requestDeviceStatus() {
-        mThreadPool.submit(new Runnable() {
+        mThreadPool.submit(new ThrowableRunnable() {
             @Override
-            public void run() {
+            void execute() {
                 __requestDeviceStatus();
             }
         });
     }
 
     void negotiateSecurity() {
-        mThreadPool.submit(new Runnable() {
+        mThreadPool.submit(new ThrowableRunnable() {
             @Override
-            public void run() {
+            void execute() {
                 __negotiateSecurity();
             }
         });
     }
 
     void configure(final BlufiConfigureParams params) {
-        mThreadPool.submit(new Runnable() {
+        mThreadPool.submit(new ThrowableRunnable() {
             @Override
-            public void run() {
+            void execute() {
                 __configure(params);
             }
         });
     }
 
     void requestDeviceWifiScan() {
-        mThreadPool.submit(new Runnable() {
+        mThreadPool.submit(new ThrowableRunnable() {
             @Override
-            public void run() {
+            void execute() {
                 __requestDeviceWifiScan();
             }
         });
     }
 
     void postCustomData(final byte[] data) {
-        mThreadPool.submit(new Runnable() {
+        mThreadPool.submit(new ThrowableRunnable() {
             @Override
-            public void run() {
+            void execute() {
                 __postCustomData(data);
             }
         });
     }
 
     void requestCloseConnection() {
-        mThreadPool.submit(new Runnable() {
+        mThreadPool.submit(new ThrowableRunnable() {
             @Override
-            public void run() {
+            void execute() {
                 __requestCloseConnection();
             }
         });
@@ -431,7 +431,7 @@ class BlufiClientImpl implements BlufiParameter {
             for (int i = 0; i < checkBytes.length; i++) {
                 checkBytes[i] = checkByteList.get(i);
             }
-            int checksum = EspCRC.caluCRC(0, checkBytes);
+            int checksum = EspCRC.calcCRC16(0, checkBytes);
             byte checksumByte1 = (byte) (checksum & 0xff);
             byte checksumByte2 = (byte) ((checksum >> 8) & 0xff);
             checksumBytes = new byte[]{checksumByte1, checksumByte2};
@@ -521,7 +521,7 @@ class BlufiClientImpl implements BlufiParameter {
             for (byte b : dataBytes) {
                 checkByteList.add(b);
             }
-            int checksum = EspCRC.caluCRC(0, DataUtil.byteListToArray(checkByteList));
+            int checksum = EspCRC.calcCRC16(0, DataUtil.byteListToArray(checkByteList));
 
             int calcChecksum1 = (checksum >> 8) & 0xff;
             int calcChecksum2 = checksum & 0xff;
@@ -809,7 +809,13 @@ class BlufiClientImpl implements BlufiParameter {
 
         mEncrypted = true;
         mChecksum = true;
-        boolean setSecurity = postSetSecurity(false, false, mEncrypted, mChecksum);
+        boolean setSecurity = false;
+        try {
+            setSecurity = postSetSecurity(false, false, mEncrypted, mChecksum);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         if (setSecurity) {
             onNegotiateSecurityResult(BlufiCallback.STATUS_SUCCESS);
         } else {
@@ -1049,7 +1055,8 @@ class BlufiClientImpl implements BlufiParameter {
     private boolean postStaWifiInfo(BlufiConfigureParams params) {
         try {
             int ssidType = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_STA_WIFI_SSID);
-            if (!post(mEncrypted, mChecksum, mRequireAck, ssidType, params.getStaSSID().getBytes())) {
+            byte[] ssidBytes = params.getStaSSIDBytes();
+            if (!post(mEncrypted, mChecksum, mRequireAck, ssidType, ssidBytes)) {
                 return false;
             }
             BlufiUtils.sleep(10);
@@ -1181,7 +1188,7 @@ class BlufiClientImpl implements BlufiParameter {
         int type = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_GET_WIFI_LIST);
         boolean request;
         try {
-            request = post(false, false, mRequireAck, type, (byte[]) null);
+            request = post(mEncrypted, mChecksum, mRequireAck, type, (byte[]) null);
         } catch (InterruptedException e) {
             e.printStackTrace();
             request = false;
@@ -1242,6 +1249,23 @@ class BlufiClientImpl implements BlufiParameter {
             post(false, false, false, type, (byte[]) null);
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+    }
+
+    private abstract class ThrowableRunnable implements Runnable {
+        @Override
+        public void run() {
+            try {
+                execute();
+            } catch (Exception e) {
+                e.printStackTrace();
+                onError(e);
+            }
+        }
+
+        abstract void execute();
+
+        void onError(Exception e) {
         }
     }
 }

@@ -14,7 +14,7 @@ public class DataUtil {
      * Print byte array row by row.
      */
     public static void printBytes(byte[] bytes, int colCount) {
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(":\n");
         for (int i = 0; i < colCount; i++) {
             if (i < 10) {
                 sb.append(0);
@@ -36,6 +36,24 @@ public class DataUtil {
         }
 
         System.out.println(sb.toString());
+    }
+
+    public static boolean equals(byte[] data1, byte[] data2) {
+        if (data1 == null || data2 == null) {
+            return false;
+        }
+
+        if (data1.length != data2.length) {
+            return false;
+        }
+
+        for (int i = 0; i < data1.length; i++) {
+            if (data1[i] != data2[i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -108,14 +126,62 @@ public class DataUtil {
     }
 
     /**
-     * @return true if data end with suffix
+     * @return true if data starts with the prefix
      */
-    private boolean endsWith(byte[] data, byte[] suffix) {
+    public static boolean startsWith(byte[] data, byte[] prefix) {
+        if (data.length < prefix.length) {
+            return false;
+        }
+        for (int i = 0; i < prefix.length; i++) {
+            if (prefix[i] != data[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return true if data ends with the suffix
+     */
+    public static boolean endsWith(byte[] data, byte[] suffix) {
         if (data.length < suffix.length) {
             return false;
         }
         for (int i = 0; i < suffix.length; i++) {
             if (suffix[i] != data[data.length - (suffix.length - i)]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return true if data starts with the prefix
+     */
+    public static boolean startsWith(List<Byte> list, byte[] prefix) {
+        if (list.size() < prefix.length) {
+            return false;
+        }
+        for (int i = 0; i < prefix.length; i++) {
+            if (prefix[i] != list.get(i)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return true if data ends with the suffix
+     */
+    public static boolean endsWith(List<Byte> list, byte[] suffix) {
+        if (list.size() < suffix.length) {
+            return false;
+        }
+        for (int i = 0; i < suffix.length; i++) {
+            if (suffix[i] != list.get(list.size() - (suffix.length - i))) {
                 return false;
             }
         }
@@ -131,24 +197,47 @@ public class DataUtil {
     }
 
     /**
-     * Merge the byte arrays.
+     * Merge the bytes arrays.
      *
      * @return a new merged array
      */
-    public static byte[] mergeBytes(byte[]... bytesArray) {
-        int resultLen = 0;
-        for (byte[] data : bytesArray) {
+    public static byte[] mergeBytes(byte[] bytes, byte[]... moreBytes) {
+        int resultLen = bytes.length;
+        for (byte[] data : moreBytes) {
             resultLen += data.length;
         }
 
         byte[] result = new byte[resultLen];
-        int offset = 0;
-        for (byte[] data : bytesArray) {
+
+        System.arraycopy(bytes, 0, result, 0, bytes.length);
+        int offset = bytes.length;
+        for (byte[] data : moreBytes) {
             System.arraycopy(data, 0, result, offset, data.length);
             offset += data.length;
         }
 
-        return  result;
+        return result;
+    }
+
+    public static byte[] subBytes(byte[] src, int begin) {
+        int length = src.length - begin;
+        byte[] result = new byte[length];
+        System.arraycopy(src, begin, result, 0, length);
+        return result;
+    }
+
+    public static byte[] subBytes(byte[] src, int begin, int length) {
+        byte[] result = new byte[length];
+        System.arraycopy(src, begin, result, 0, length);
+        return result;
+    }
+
+    public static byte[] reverseBytes(byte[] src) {
+        byte[] result = new byte[src.length];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = src[src.length - 1 - i];
+        }
+        return result;
     }
 
     /**

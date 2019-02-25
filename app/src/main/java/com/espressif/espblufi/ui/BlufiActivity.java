@@ -179,7 +179,7 @@ public class BlufiActivity extends BaseActivity {
             mGatt.close();
         }
         GattCallback callback = new GattCallback();
-        if (SdkUtil.isAtLeastM()) {
+        if (SdkUtil.isAtLeastM_23()) {
             mGatt = mDevice.connectGatt(this, false, callback, BluetoothDevice.TRANSPORT_LE);
         } else {
             mGatt = mDevice.connectGatt(this, false, callback);
@@ -373,7 +373,7 @@ public class BlufiActivity extends BaseActivity {
 
                 gatt.setCharacteristicNotification(notifyCharact, true);
 
-                if (SdkUtil.isAtLeastL()) {
+                if (SdkUtil.isAtLeastL_21()) {
                     gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
                     int mtu = (int) BlufiApp.getInstance().settingsGet(
                             SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);

@@ -10,7 +10,7 @@ public class SdkUtil {
      *
      * @return true if I APIs are available for use.
      */
-    public static boolean isAtLeastI() {
+    public static boolean isAtLeastI_14() {
         return SDK_INT >= VERSION_CODES.ICE_CREAM_SANDWICH;
     }
 
@@ -19,7 +19,7 @@ public class SdkUtil {
      *
      * @return true if I_MR1 APIs are available for use.
      */
-    public static boolean isAtLeastIMR1() {
+    public static boolean isAtLeastIMR1_15() {
         return SDK_INT >= VERSION_CODES.ICE_CREAM_SANDWICH_MR1;
     }
 
@@ -28,7 +28,7 @@ public class SdkUtil {
      *
      * @return true if J APIs are available for use.
      */
-    public static boolean isAtLeastJ() {
+    public static boolean isAtLeastJ_16() {
         return SDK_INT >= VERSION_CODES.JELLY_BEAN;
     }
 
@@ -37,7 +37,7 @@ public class SdkUtil {
      *
      * @return true if J_MR1 APIs are available for use.
      */
-    public static boolean isAtLeastJMR1() {
+    public static boolean isAtLeastJMR1_17() {
         return SDK_INT >= VERSION_CODES.JELLY_BEAN_MR1;
     }
 
@@ -46,7 +46,7 @@ public class SdkUtil {
      *
      * @return true if J_MR2 APIs are available for use.
      */
-    public static boolean isAtLeastJMR2() {
+    public static boolean isAtLeastJMR2_18() {
         return SDK_INT >= VERSION_CODES.JELLY_BEAN_MR2;
     }
 
@@ -55,7 +55,7 @@ public class SdkUtil {
      *
      * @return true if K APIs are available for use.
      */
-    public static boolean isAtLeastK() {
+    public static boolean isAtLeastK_19() {
         return SDK_INT >= VERSION_CODES.KITKAT;
     }
 
@@ -64,7 +64,7 @@ public class SdkUtil {
      *
      * @return true if K_W APIs are available for use.
      */
-    public static boolean isAtLeastKW() {
+    public static boolean isAtLeastKW_20() {
         return SDK_INT >= VERSION_CODES.KITKAT_WATCH;
     }
 
@@ -73,7 +73,7 @@ public class SdkUtil {
      *
      * @return true if L APIs are available for use.
      */
-    public static boolean isAtLeastL() {
+    public static boolean isAtLeastL_21() {
         return SDK_INT >= VERSION_CODES.LOLLIPOP;
     }
 
@@ -82,7 +82,7 @@ public class SdkUtil {
      *
      * @return true if L_MR1 APIs are available for use.
      */
-    public static boolean isAtLeastLMR1() {
+    public static boolean isAtLeastLMR1_22() {
         return SDK_INT >= VERSION_CODES.LOLLIPOP_MR1;
     }
 
@@ -91,7 +91,7 @@ public class SdkUtil {
      *
      * @return true if M APIs are available for use.
      */
-    public static boolean isAtLeastM() {
+    public static boolean isAtLeastM_23() {
         return SDK_INT >= VERSION_CODES.M;
     }
 
@@ -100,7 +100,7 @@ public class SdkUtil {
      *
      * @return true if N APIs are available for use.
      */
-    public static boolean isAtLeastN() {
+    public static boolean isAtLeastN_24() {
         return SDK_INT >= VERSION_CODES.N;
     }
 
@@ -109,7 +109,7 @@ public class SdkUtil {
      *
      * @return true if N_MR1 APIs are available for use.
      */
-    public static boolean isAtLeastNMR1() {
+    public static boolean isAtLeastNMR1_25() {
         return SDK_INT >= VERSION_CODES.N_MR1;
     }
 
@@ -118,7 +118,25 @@ public class SdkUtil {
      *
      * @return true if O APIs are available for use.
      */
-    public static boolean isAtLeastO() {
-        return SDK_INT >= 26;
+    public static boolean isAtLeastO_26() {
+        return SDK_INT >= VERSION_CODES.O;
+    }
+
+    /**
+     * Check if the device is running on the Android O(27) release or newer.
+     *
+     * @return true if O APIs are available for use.
+     */
+    public static boolean isAtLeastOMR1_27() {
+        return SDK_INT >= VERSION_CODES.O_MR1;
+    }
+
+    /**
+     * Check if the device is running on the Android P(28) release or newer.
+     *
+     * @return true if O APIs are available for use.
+     */
+    public static boolean isAtLeastOMR1_28() {
+        return SDK_INT >= 28;
     }
 }

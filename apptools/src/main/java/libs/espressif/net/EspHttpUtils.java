@@ -2,13 +2,19 @@ package libs.espressif.net;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
+import java.util.TreeMap;
 
 import javax.net.ssl.HttpsURLConnection;
 
@@ -16,26 +22,32 @@ import libs.espressif.log.EspLog;
 import libs.espressif.utils.DataUtil;
 
 public class EspHttpUtils {
-    public static final String H_NAME_CONNECTION = "Connection";
-    public static final String H_NAME_CONTENT_TYPE = "Content-Type";
-    public static final String H_NAME_CONTENT_LENGTH = "Content-Length";
-    public static final String H_NAME_TRANSFER_ENCODING = "Transfer-Encoding";
+    public static final String CONNECTION = "Connection";
+    public static final String CONTENT_TYPE = "Content-Type";
+    public static final String CONTENT_LENGTH = "Content-Length";
+    public static final String TRANSFER_ENCODING = "Transfer-Encoding";
+
+    public static final String KEEP_ALIVE = "Keep-Alive";
+    public static final String CLOSE = "close";
+    public static final String APPLICATION_JSON = "application/json";
+    public static final String CHUNKED = "chunked";
 
     public static final String HTTP = "http";
     public static final String HTTPS = "https";
 
-    public static final EspHttpHeader HEADER_KEEP_ALIVE = new ConstHeader(H_NAME_CONNECTION, "Keep-Alive");
-    public static final EspHttpHeader HEADER_CONTENT_JSON = new ConstHeader(H_NAME_CONTENT_TYPE, "application/json");
-    public static final EspHttpHeader HEADER_CHUNKED = new ConstHeader(H_NAME_TRANSFER_ENCODING, "chunked");
+    public static final EspHttpHeader HEADER_KEEP_ALIVE = new ConstHeader(CONNECTION, KEEP_ALIVE);
+    public static final EspHttpHeader HEADER_CONTENT_JSON = new ConstHeader(CONTENT_TYPE, APPLICATION_JSON);
+    public static final EspHttpHeader HEADER_CHUNKED = new ConstHeader(TRANSFER_ENCODING, CHUNKED);
 
     private static final EspLog log = new EspLog(EspHttpUtils.class);
 
-    private static final String H_VALUE_CLOSE = "close";
-
-    private static final String METHOD_GET = "GET";
-    private static final String METHOD_POST = "POST";
-    private static final String METHOD_PUT = "PUT";
-    private static final String METHOD_DELETE = "DELETE";
+    public static final String METHOD_GET = "GET";
+    public static final String METHOD_POST = "POST";
+    public static final String METHOD_HEAD = "HEAD";
+    public static final String METHOD_OPTIONS = "OPTIONS";
+    public static final String METHOD_PUT = "PUT";
+    public static final String METHOD_DELETE = "DELETE";
+    public static final String METHOD_TRACE = "TRACE";
 
     private static final int TIMEOUT_CONNECT = 4000;
     private static final int TIMEOUT_SO_GET = 5000;
@@ -139,9 +151,9 @@ public class EspHttpUtils {
 
                 connection.addRequestProperty(head.getName(), head.getValue());
             }
-            String connValue = connection.getRequestProperty(H_NAME_CONNECTION);
+            String connValue = connection.getRequestProperty(CONNECTION);
             if (connValue == null) {
-                connection.addRequestProperty(H_NAME_CONNECTION, H_VALUE_CLOSE);
+                connection.addRequestProperty(CONNECTION, CLOSE);
             }
 
             if (params != null) {
@@ -205,7 +217,7 @@ public class EspHttpUtils {
             return null;
         }
 
-        EspHttpResponse response = null;
+        EspHttpResponse response;
         try {
             response = readResponse(connection);
         } catch (IOException e) {
@@ -253,12 +265,8 @@ public class EspHttpUtils {
 
         // Get http content
         LinkedList<Byte> contentList = new LinkedList<>();
-        InputStream is;
-        if (code >= 200 && code < 300) {
-            is = connection.getInputStream();
-        } else {
-            is = connection.getErrorStream();
-        }
+        InputStream is = connection.getErrorStream() == null ?
+                connection.getInputStream() : connection.getErrorStream();
         try {
             for (int data = is.read(); data != -1; data = is.read()) {
                 contentList.add((byte) data);
@@ -269,6 +277,7 @@ public class EspHttpUtils {
         if (!contentList.isEmpty()) {
             response.setContent(DataUtil.byteListToArray(contentList));
             log.i(response.getContentString());
+            contentList.clear();
         }
 
         return response;
@@ -387,5 +396,61 @@ public class EspHttpUtils {
         public void setValue(String value) {
             throw new IllegalArgumentException("Esp const header forbid change value");
         }
+    }
+
+    public static Map<String, String> getQueryMap(String url)
+            throws URISyntaxException, UnsupportedEncodingException {
+        URI uri = new URI(url);
+        String query = uri.getQuery();
+        final String[] pairs = query.split("&");
+        TreeMap<String, String> queryMap = new TreeMap<>();
+        for (String pair : pairs) {
+            final int idx = pair.indexOf("=");
+            final String key = idx > 0 ? pair.substring(0, idx) : pair;
+            if (!queryMap.containsKey(key)) {
+                queryMap.put(key, URLDecoder.decode(pair.substring(idx + 1), Charset.defaultCharset().name()));
+            }
+        }
+        return queryMap;
+    }
+
+    public static String composeUrl(String protocol, String endPoint, Map<String, String> queries)
+            throws UnsupportedEncodingException {
+        Map<String, String> mapQueries = queries;
+        StringBuilder urlBuilder = new StringBuilder("");
+        urlBuilder.append(protocol);
+        urlBuilder.append("://").append(endPoint);
+        if (-1 == urlBuilder.indexOf("?")) {
+            urlBuilder.append("/?");
+        }
+        urlBuilder.append(concatQueryString(mapQueries));
+        return urlBuilder.toString();
+    }
+
+    public static String concatQueryString(Map<String, String> parameters)
+            throws UnsupportedEncodingException {
+        if (null == parameters) {
+            return null;
+        }
+        StringBuilder urlBuilder = new StringBuilder("");
+        for (Map.Entry<String, String> entry : parameters.entrySet()) {
+            String key = entry.getKey();
+            String val = entry.getValue();
+            urlBuilder.append(encode(key));
+            if (val != null) {
+                urlBuilder.append("=").append(encode(val));
+            }
+            urlBuilder.append("&");
+        }
+        int strIndex = urlBuilder.length();
+        if (parameters.size() > 0) {
+            urlBuilder.deleteCharAt(strIndex - 1);
+        }
+        return urlBuilder.toString();
+    }
+
+    public static String encode(String value)
+            throws UnsupportedEncodingException {
+        return URLEncoder.encode(value, "UTF-8");
     }
 }

@@ -4,17 +4,30 @@ import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.DhcpInfo;
 import android.net.NetworkInfo;
+import android.net.wifi.ScanResult;
+import android.net.wifi.WifiConfiguration;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import libs.espressif.app.SdkUtil;
 
 public class NetUtil {
+    public static final int WIFI_SECURITY_OPEN = 0x00;
+    public static final int WIFI_SECURITY_WEP = 0x01;
+    public static final int WIFI_SECURITY_WPA = 0x02;
+
+    public static final String WIFI_SSID_NONE = "<unknown ssid>";
+
     public static boolean isNetworkAvailable(Context context) {
-        ConnectivityManager cm = (ConnectivityManager) context.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+        ConnectivityManager cm = (ConnectivityManager) context.getApplicationContext()
+                .getSystemService(Context.CONNECTIVITY_SERVICE);
+        assert cm != null;
         int[] types = new int[]{ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE};
         for (int type : types) {
             NetworkInfo info = cm.getNetworkInfo(type);
@@ -53,12 +66,15 @@ public class NetUtil {
      */
     public static String getCurrentConnectSSID(Context context) {
         WifiManager wm = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        assert wm != null;
         WifiInfo connection = wm.getConnectionInfo();
         boolean isWifiConnected = connection != null && connection.getNetworkId() != -1;
         if (isWifiConnected) {
             String ssid = connection.getSSID();
-            if (ssid.startsWith("\"") && ssid.endsWith("\"")) {
-                ssid = ssid.substring(1, ssid.length() - 1);
+            if (SdkUtil.isAtLeastJ_16()) {
+                if (ssid.startsWith("\"") && ssid.endsWith("\"")) {
+                    ssid = ssid.substring(1, ssid.length() - 1);
+                }
             }
 
             return ssid;
@@ -75,6 +91,7 @@ public class NetUtil {
      */
     public static String getCurrentConnectBSSID(Context context) {
         WifiManager wm = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        assert wm != null;
         WifiInfo connection = wm.getConnectionInfo();
         boolean isWifiConnected = connection != null && connection.getNetworkId() != -1;
         if (isWifiConnected) {
@@ -92,6 +109,7 @@ public class NetUtil {
      */
     public static String getCurrentConnectIP(Context context) {
         WifiManager wm = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        assert wm != null;
         WifiInfo connection = wm.getConnectionInfo();
         boolean isWifiConnected = connection != null && connection.getNetworkId() != -1;
         if (isWifiConnected) {
@@ -117,10 +135,11 @@ public class NetUtil {
      * Get the connection information of the connected access point.
      *
      * @param context The Application Context.
-     * @return An information string array. Position 0 is ssid, position 1 is bssid, position 2 is ip address, null is disconnected
+     * @return An information string array with [ssid bssid ipAddress frequency], or null if disconnected
      */
     public static String[] getCurrentConnectionInfo(Context context) {
         WifiManager wm = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        assert wm != null;
         WifiInfo connection = wm.getConnectionInfo();
         boolean isWifiConnected = connection != null && connection.getNetworkId() != -1;
         if (isWifiConnected) {
@@ -134,7 +153,7 @@ public class NetUtil {
             result[0] = ssid;
             result[1] = connection.getBSSID();
             result[2] = getIpString(connection.getIpAddress());
-            if (SdkUtil.isAtLeastL()) {
+            if (SdkUtil.isAtLeastL_21()) {
                 result[3] = String.valueOf(connection.getFrequency());
             }
             return result;
@@ -151,6 +170,7 @@ public class NetUtil {
      */
     public static boolean isWifiConnected(Context context) {
         WifiManager wm = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        assert wm != null;
         WifiInfo connection = wm.getConnectionInfo();
         return connection != null && connection.getNetworkId() != -1;
     }
@@ -166,10 +186,20 @@ public class NetUtil {
     }
 
     /**
+     * Check is the frequency 2.4G channel or not.
+     *
+     * @param frequency The frequency need check
+     * @return true if the frequency is 2.4G
+     */
+    public static boolean is24GHz(int frequency) {
+        return frequency > 2400 && frequency < 2500;
+    }
+
+    /**
      * Get the channel by the frequency.
      *
      * @param frequency The wifi frequency.
-     * @return The wifi channel.
+     * @return The wifi channel. -1 is unknown channel.
      */
     public static int getWifiChannel(int frequency) {
         switch (frequency) {
@@ -302,5 +332,117 @@ public class NetUtil {
         for (int k = 0; k < 4; k++)
             quads[k] = (byte) ((broadcast >> k * 8) & 0xFF);
         return InetAddress.getByAddress(quads);
+    }
+
+    public static byte[] getOriginalSsidBytes(WifiInfo info) {
+        try {
+            Method method = info.getClass().getMethod("getWifiSsid");
+            if (method == null) {
+                return null;
+            }
+            method.setAccessible(true);
+            Object wifiSsid = method.invoke(info);
+            if (wifiSsid == null) {
+                return null;
+            }
+            method = wifiSsid.getClass().getMethod("getOctets");
+            if (method == null) {
+                return null;
+            }
+            method.setAccessible(true);
+            return (byte[]) method.invoke(wifiSsid);
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static byte[] getOriginalSsidBytes(ScanResult scanResult) {
+        try {
+            Field field = scanResult.getClass().getField("wifiSsid");
+            if (field == null) {
+                return null;
+            }
+            field.setAccessible(true);
+            Object wifiSsid = field.get(scanResult);
+            if (wifiSsid == null) {
+                return null;
+            }
+            Method method = wifiSsid.getClass().getMethod("getOctets");
+            if (method == null) {
+                return null;
+            }
+            method.setAccessible(true);
+            return (byte[]) method.invoke(wifiSsid);
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+    public static WifiConfiguration newWifiConfigration(int security, String ssid, String password, boolean hide) {
+        WifiConfiguration config = new WifiConfiguration();
+        config.allowedAuthAlgorithms.clear();
+        config.allowedGroupCiphers.clear();
+        config.allowedKeyManagement.clear();
+        config.allowedPairwiseCiphers.clear();
+        config.allowedProtocols.clear();
+
+        config.SSID = "\"" + ssid + "\""; // ##
+        config.hiddenSSID = hide; // ##
+        config.status = WifiConfiguration.Status.ENABLED;
+
+        switch (security) {
+            case WIFI_SECURITY_OPEN: // OPEN
+                config.wepKeys[0] = "\"" + "\"";
+                config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
+                config.wepTxKeyIndex = 0;
+                break;
+            case WIFI_SECURITY_WEP: // WEP
+                config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
+                config.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.OPEN);
+                config.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.SHARED);
+                if (password != null && password.length() > 0) {
+                    int length = password.length();
+                    // WEP-40, WEP-104, and 256-bit WEP (WEP-232?)
+                    if ((length == 10 || length == 26 || length == 58) && password.matches("[0-9A-Fa-f]*")) {
+                        config.wepKeys[0] = password; // ##
+                    } else {
+                        config.wepKeys[0] = '"' + password + '"'; // ##
+                    }
+                }
+                break;
+            case WIFI_SECURITY_WPA: // WPA
+                config.preSharedKey = "\"" + password + "\""; // ##
+
+                config.allowedAuthAlgorithms.set(WifiConfiguration.AuthAlgorithm.OPEN);
+                // for WPA
+                config.allowedProtocols.set(WifiConfiguration.Protocol.WPA);
+                // for WPA2
+                config.allowedProtocols.set(WifiConfiguration.Protocol.RSN);
+                config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
+                config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_EAP);
+                config.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.TKIP);
+                config.allowedPairwiseCiphers.set(WifiConfiguration.PairwiseCipher.CCMP);
+                config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.TKIP);
+                config.allowedGroupCiphers.set(WifiConfiguration.GroupCipher.CCMP);
+                break;
+            default:
+                return null;
+        }
+        return config;
     }
 }

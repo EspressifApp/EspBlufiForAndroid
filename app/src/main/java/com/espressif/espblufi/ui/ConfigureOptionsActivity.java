@@ -118,22 +118,6 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
         mWifiList = new ArrayList<>();
         mStationForm = findViewById(R.id.station_wifi_form);
         mStationSsidET = findViewById(R.id.station_ssid);
-        mStationSsidET.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                String ssid = s.toString();
-                String password = mApMap.get(ssid);
-                mStationPasswordET.setText(password);
-            }
-        });
         mStationPasswordET = findViewById(R.id.station_wifi_password);
         findViewById(R.id.station_wifi_scan).setOnClickListener(v -> scanWifi());
         mAutoCompleteSSIDAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, mAutoCompleteSSIDs);
@@ -151,9 +135,15 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
             public void afterTextChanged(Editable s) {
                 String pwd = mApMap.get(s.toString());
                 mStationPasswordET.setText(pwd);
+                mStationSsidET.setTag(null);
             }
         });
         mStationSsidET.setText(getConnectionSSID());
+        WifiInfo info = ((WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE)).getConnectionInfo();
+        if (info != null) {
+            byte[] ssidBytes = NetUtil.getOriginalSsidBytes(info);
+            mStationSsidET.setTag(ssidBytes);
+        }
 
         findViewById(R.id.confirm).setOnClickListener(v -> configure());
 
@@ -177,6 +167,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
         if (ssid.startsWith("\"") && ssid.endsWith("\"") && ssid.length() >= 2) {
             ssid = ssid.substring(1, ssid.length() - 1);
         }
+
         return ssid;
     }
 
@@ -331,6 +322,9 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
         new AlertDialog.Builder(this)
                 .setSingleChoiceItems(wifiSSIDs, checkedItem, (dialog, which) -> {
                     mStationSsidET.setText(wifiSSIDs[which]);
+                    ScanResult scanResult = mWifiList.get(which);
+                    byte[] ssidBytes = NetUtil.getOriginalSsidBytes(scanResult);
+                    mStationSsidET.setTag(ssidBytes);
                     dialog.dismiss();
                 })
                 .show();
@@ -356,7 +350,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
                     return null;
                 }
             case BlufiParameter.OP_MODE_STASOFTAP:
-                if (checkSta(params) && checkSoftAP(params)) {
+                if (checkSoftAP(params) && checkSta(params)) {
                     return params;
                 } else {
                     return null;
@@ -372,7 +366,8 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
             mStationSsidET.setError(getString(R.string.configure_station_ssid_error));
             return false;
         }
-        params.setStaSSID(ssid);
+        byte[] ssidBytes = (byte[]) mStationSsidET.getTag();
+        params.setStaSSIDBytes(ssidBytes != null ? ssidBytes : ssid.getBytes());
         String password = mStationPasswordET.getText().toString();
         params.setStaPassword(password);
 
@@ -390,6 +385,13 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
         }
         if (NetUtil.is5GHz(freq)) {
             mStationSsidET.setError(getString(R.string.configure_station_wifi_5g_error));
+            new AlertDialog.Builder(this)
+                    .setMessage(R.string.configure_station_wifi_5g_dialog_message)
+                    .setPositiveButton(R.string.configure_station_wifi_5g_dialog_continue, (dialog, which) -> {
+                        finishWithParams(params);
+                    })
+                    .setNegativeButton(R.string.configure_station_wifi_5g_dialog_cancel, null)
+                    .show();
             return false;
         }
 
@@ -437,6 +439,23 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
             return;
         }
 
+        finishWithParams(params);
+    }
+
+    private void saveAP(BlufiConfigureParams params) {
+        switch (params.getOpMode()) {
+            case BlufiParameter.OP_MODE_STA:
+            case BlufiParameter.OP_MODE_STASOFTAP:
+                String ssid = new String(params.getStaSSIDBytes());
+                String pwd = params.getStaPassword();
+                mApPref.edit().putString(ssid, pwd).apply();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void finishWithParams(BlufiConfigureParams params) {
         Intent intent = new Intent();
         intent.putExtra(BlufiConstants.KEY_CONFIGURE_PARAM, params);
 
@@ -444,18 +463,5 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
 
         setResult(RESULT_OK, intent);
         finish();
-    }
-
-    private void saveAP(BlufiConfigureParams params) {
-        switch (params.getOpMode()) {
-            case BlufiParameter.OP_MODE_STA:
-            case BlufiParameter.OP_MODE_STASOFTAP:
-                String ssid = params.getStaSSID();
-                String pwd = params.getStaPassword();
-                mApPref.edit().putString(ssid, pwd).apply();
-                break;
-            default:
-                break;
-        }
     }
 }

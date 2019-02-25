@@ -10,7 +10,7 @@ public class BlufiConfigureParams implements Serializable {
     private int mOpMode;
 
     private String mStaBSSID;
-    private String mStaSSID;
+    private byte[] mStaSSIDBytes;
     private String mStaPassword;
 
     private int mSoftAPSecurity;
@@ -35,12 +35,12 @@ public class BlufiConfigureParams implements Serializable {
         mStaBSSID = bssid;
     }
 
-    public String getStaSSID() {
-        return mStaSSID;
+    public void setStaSSIDBytes(byte[] staSSIDBytes) {
+        mStaSSIDBytes = staSSIDBytes;
     }
 
-    public void setStaSSID(String ssid) {
-        mStaSSID = ssid;
+    public byte[] getStaSSIDBytes() {
+        return mStaSSIDBytes;
     }
 
     public String getStaPassword() {
@@ -98,7 +98,7 @@ public class BlufiConfigureParams implements Serializable {
                         " softap ssid = %s, softap password = %s, softap channel = %d, softap max connection = %d",
                 mOpMode,
                 mStaBSSID,
-                mStaSSID,
+                mStaSSIDBytes == null ? null : new String(mStaSSIDBytes),
                 mStaPassword,
                 mSoftAPSecurity,
                 mSoftAPSSID,

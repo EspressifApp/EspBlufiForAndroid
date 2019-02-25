@@ -39,7 +39,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import libs.espressif.app.PermissionHelper;
-import libs.espressif.ble.EspBleClient;
+import libs.espressif.ble.EspBleUtils;
 import libs.espressif.ble.ScanListener;
 import libs.espressif.log.EspLog;
 
@@ -175,7 +175,7 @@ public class MainActivity extends AppCompatActivity {
         mScanStartTime = SystemClock.elapsedRealtime();
 
         mLog.d("Start scan ble");
-        EspBleClient.startScanBle(mScanCallback);
+        EspBleUtils.startScanBle(mScanCallback);
         mUpdateFuture = mThreadPool.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
@@ -193,14 +193,14 @@ public class MainActivity extends AppCompatActivity {
                 onIntervalScanUpdate(false);
             }
 
-            EspBleClient.stopScanBle(mScanCallback);
+            EspBleUtils.stopScanBle(mScanCallback);
             onIntervalScanUpdate(true);
             mLog.d("Scan ble thread is interrupted");
         });
     }
 
     private void stopScan() {
-        EspBleClient.stopScanBle(mScanCallback);
+        EspBleUtils.stopScanBle(mScanCallback);
         if (mUpdateFuture != null) {
             mUpdateFuture.cancel(true);
         }

@@ -50,7 +50,7 @@ public class PermissionHelper {
      * @param permissions the requested permissions.
      */
     public void requestAuthorities(@NonNull String[] permissions) {
-        if (SdkUtil.isAtLeastM()) {
+        if (SdkUtil.isAtLeastM_23()) {
             final List<String> requirePermissionList = new ArrayList<>();
 
             for (String permission : permissions) {
@@ -108,8 +108,8 @@ public class PermissionHelper {
          * Call when the permission has changed.
          *
          * @param permission the changed permisson.
-         * @param permited   granted or not.
+         * @param granted or not.
          */
-        void onPermissonsChange(String permission, boolean permited);
+        void onPermissonsChange(String permission, boolean granted);
     }
 }
