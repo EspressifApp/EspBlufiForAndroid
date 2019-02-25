@@ -1,5 +1,8 @@
 # Update Log
 
+## v1.3.2
+- Fix configure network failed if AP using non-UTF8 character encoding SSID
+
 ## 6/25/2018
 - Blufi source code opened, see module blufilibrary
 - Delete BlufiCommunicator
