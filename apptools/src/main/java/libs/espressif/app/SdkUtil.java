@@ -134,9 +134,9 @@ public class SdkUtil {
     /**
      * Check if the device is running on the Android P(28) release or newer.
      *
-     * @return true if O APIs are available for use.
+     * @return true if P APIs are available for use.
      */
-    public static boolean isAtLeastOMR1_28() {
+    public static boolean isAtLeastP_28() {
         return SDK_INT >= 28;
     }
 }

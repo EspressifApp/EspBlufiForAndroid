@@ -1,21 +1,32 @@
 <resources>
     <string name="app_name">EspBlufi</string>
 
+    <string name="string_unknown">Unknown</string>
+
     <string name="main_title">EspBlufi</string>
     <string name="main_bt_disable_msg">Bluetooth is disable</string>
     <string name="main_location_disable_msg">Location is disable</string>
     <string name="main_menu_settings">Settings</string>
 
     <string name="blufi_function_connect">Connect</string>
+    <string name="blufi_function_connect_msg">Try connecting device</string>
     <string name="blufi_function_disconnect">Disconnect</string>
+    <string name="blufi_function_disconnect_msg">Disconnect device</string>
     <string name="blufi_function_security">Security</string>
+    <string name="blufi_function_security_msg">Negotiate security with device</string>
     <string name="blufi_function_version">Version</string>
+    <string name="blufi_function_version_msg">Get the device blufi version</string>
     <string name="blufi_function_device_status">Status</string>
+    <string name="blufi_function_device_status_msg">Get the device status</string>
     <string name="blufi_function_configure">Configure</string>
+    <string name="blufi_function_configure_msg">Configure network for device</string>
     <string name="blufi_function_device_scan">ScanWifi</string>
+    <string name="blufi_function_device_scan_msg">Get ssid list the device scanned</string>
     <string name="blufi_function_custom">Custom</string>
+    <string name="blufi_function_custom_msg">Send custom data to device</string>
     <string name="blufi_custom_dialog_title">Input custom text</string>
 
+    <string name="configure_title">Configure</string>
     <string name="configure_sel_device_mode">Select device mode</string>
     <string name="configure_softap_security">SoftAP Security</string>
     <string name="configure_softap_ssid">SoftAP ssid</string>
@@ -50,6 +61,4 @@
     <string name="settings_version_title">APP Version</string>
     <string name="settings_blufi_version_key">settings_key_blufi_version</string>
     <string name="settings_blufi_version_title">Blufi lib version</string>
-    <string name="settings_support_protocol_key">settings_key_support_protocol</string>
-    <string name="settings_support_protocol_title">Support protocol version</string>
 </resources>

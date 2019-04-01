@@ -18,9 +18,7 @@ import com.espressif.espblufi.app.BlufiApp;
 import com.espressif.espblufi.constants.BlufiConstants;
 import com.espressif.espblufi.constants.SettingsConstants;
 
-import java.util.Locale;
-
-import blufi.espressif.BlufiUtils;
+import blufi.espressif.BlufiClient;
 
 public class SettingsActivity extends BaseActivity {
 
@@ -53,11 +51,7 @@ public class SettingsActivity extends BaseActivity {
             mApp = BlufiApp.getInstance();
 
             findPreference(getString(R.string.settings_version_key)).setSummary(getVersionName());
-            findPreference(getString(R.string.settings_blufi_version_key)).setSummary(BlufiUtils.VERSION);
-            String supportProtocolVersion = String.format(Locale.ENGLISH, "%d.%d",
-                    BlufiUtils.SUPPORT_BLUFI_VERSION[0], BlufiUtils.SUPPORT_BLUFI_VERSION[1]);
-            findPreference(getString(R.string.settings_support_protocol_key)).setSummary(supportProtocolVersion);
-
+            findPreference(getString(R.string.settings_blufi_version_key)).setSummary(BlufiClient.VERSION);
 
             mMtuPref = (EditTextPreference) findPreference(getString(R.string.settings_mtu_length_key));
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
@@ -85,7 +79,7 @@ public class SettingsActivity extends BaseActivity {
                 version = pi.versionName;
             } catch (PackageManager.NameNotFoundException e) {
                 e.printStackTrace();
-                version = "Unknow";
+                version = getString(R.string.string_unknown);
             }
             return version;
         }

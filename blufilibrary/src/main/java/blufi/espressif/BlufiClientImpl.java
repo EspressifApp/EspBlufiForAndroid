@@ -6,6 +6,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Collections;
@@ -31,7 +33,7 @@ import libs.espressif.security.EspMD5;
 import libs.espressif.utils.DataUtil;
 
 class BlufiClientImpl implements BlufiParameter {
-    private static final int DEFAULT_PACKAGE_LENGTH = 80;
+    private static final int DEFAULT_PACKAGE_LENGTH = 20;
     private static final int PACKAGE_HEADER_LENGTH = 4;
     private static final int MIN_PACKAGE_LENGTH = 6;
 
@@ -324,25 +326,10 @@ class BlufiClientImpl implements BlufiParameter {
 
     private boolean post(boolean encrypt, boolean checksum, boolean requireAck, int type, byte[] data)
             throws InterruptedException {
-        LinkedList<Byte> allDataList;
-        if (data == null) {
-            allDataList = null;
-        } else {
-            allDataList = new LinkedList<>();
-            for (byte b : data) {
-                allDataList.add(b);
-            }
-        }
-
-        return post(encrypt, checksum, requireAck, type, allDataList);
-    }
-
-    private boolean post(boolean encrypt, boolean checksum, boolean requireAck, int type, List<Byte> dataList)
-            throws InterruptedException {
-        if (dataList != null) {
-            return postContainData(encrypt, checksum, requireAck, type, dataList);
-        } else {
+        if (data == null || data.length == 0) {
             return postNonData(encrypt, checksum, requireAck, type);
+        } else {
+            return postContainData(encrypt, checksum, requireAck, type, data);
         }
     }
 
@@ -358,35 +345,36 @@ class BlufiClientImpl implements BlufiParameter {
         return !requireAck || receiveAck(sequence);
     }
 
-    private boolean postContainData(boolean encrypt, boolean checksum, boolean requireAck, int type, List<Byte> dataList)
+    private boolean postContainData(boolean encrypt, boolean checksum, boolean requireAck, int type, byte[] data)
             throws InterruptedException {
-        LinkedList<Byte> allDataList = new LinkedList<>();
-        allDataList.addAll(dataList);
+        ByteArrayInputStream dataIS = new ByteArrayInputStream(data);
 
-        LinkedList<Byte> postDataList = new LinkedList<>();
+        ByteArrayOutputStream postOS = new ByteArrayOutputStream();
 
-        while (!allDataList.isEmpty()) {
-            Byte b = allDataList.poll();
-            postDataList.add(b);
+        for (int b = dataIS.read(); b != -1; b = dataIS.read()) {
+            postOS.write(b);
             int postDataLengthLimit = mPackageLengthLimit - PACKAGE_HEADER_LENGTH;
             if (checksum) {
                 postDataLengthLimit -= 1;
             }
-            if (postDataList.size() >= postDataLengthLimit) {
-                boolean frag = !allDataList.isEmpty();
+            if (postOS.size() >= postDataLengthLimit) {
+                boolean frag = dataIS.available() > 0;
                 if (frag) {
                     int frameCtrl = getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, true);
                     int sequence = generateSendSequence();
-                    int totleLen = postDataList.size() + allDataList.size();
+                    int totleLen = postOS.size() + dataIS.available();
                     byte totleLen1 = (byte) (totleLen & 0xff);
                     byte totleLen2 = (byte) ((totleLen >> 8) & 0xff);
-                    postDataList.add(0, totleLen2);
-                    postDataList.add(0, totleLen1);
-                    int posDatatLen = postDataList.size();
+                    byte[] tempData = postOS.toByteArray();
+                    postOS.reset();
+                    postOS.write(totleLen1);
+                    postOS.write(totleLen2);
+                    postOS.write(tempData, 0, tempData.length);
+                    int posDatatLen = postOS.size();
 
-                    byte[] postBytes = getPostBytes(type, frameCtrl, sequence, posDatatLen, postDataList);
+                    byte[] postBytes = getPostBytes(type, frameCtrl, sequence, posDatatLen, postOS.toByteArray());
                     gattWrite(postBytes);
-                    postDataList.clear();
+                    postOS.reset();
                     if (requireAck && !receiveAck(sequence)) {
                         return false;
                     }
@@ -396,14 +384,14 @@ class BlufiClientImpl implements BlufiParameter {
             }
         }
 
-        if (!postDataList.isEmpty()) {
+        if (postOS.size() > 0) {
             int frameCtrl = getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, false);
             int sequence = generateSendSequence();
-            int postDataLen = postDataList.size();
+            int postDataLen = postOS.size();
 
-            byte[] postBytes = getPostBytes(type, frameCtrl, sequence, postDataLen, postDataList);
+            byte[] postBytes = getPostBytes(type, frameCtrl, sequence, postDataLen, postOS.toByteArray());
             gattWrite(postBytes);
-            postDataList.clear();
+            postOS.reset();
 
             return !requireAck || receiveAck(sequence);
         }
@@ -411,61 +399,40 @@ class BlufiClientImpl implements BlufiParameter {
         return true;
     }
 
-    private byte[] getPostBytes(int type, int frameCtrl, int sequence, int dataLength, List<Byte> data) {
-        LinkedList<Byte> byteList = new LinkedList<>();
-        byteList.add((byte) type);
-        byteList.add((byte) frameCtrl);
-        byteList.add((byte) sequence);
-        byteList.add((byte) dataLength);
+    private byte[] getPostBytes(int type, int frameCtrl, int sequence, int dataLength, byte[] data) {
+        ByteArrayOutputStream byteOS = new ByteArrayOutputStream();
+        byteOS.write(type);
+        byteOS.write(frameCtrl);
+        byteOS.write(sequence);
+        byteOS.write(dataLength);
 
         BlufiParameter.FrameCtrlData frameCtrlData = new BlufiParameter.FrameCtrlData(frameCtrl);
         byte[] checksumBytes = null;
         if (frameCtrlData.isChecksum()) {
-            List<Byte> checkByteList = new LinkedList<>();
-            checkByteList.add((byte) sequence);
-            checkByteList.add((byte) dataLength);
+            byte[] willCheckBytes = new byte[]{(byte) sequence, (byte) dataLength};
             if (data != null) {
-                checkByteList.addAll(data);
+                willCheckBytes = DataUtil.mergeBytes(willCheckBytes, data);
             }
-            byte[] checkBytes = new byte[checkByteList.size()];
-            for (int i = 0; i < checkBytes.length; i++) {
-                checkBytes[i] = checkByteList.get(i);
-            }
-            int checksum = EspCRC.calcCRC16(0, checkBytes);
+            int checksum = EspCRC.calcCRC16(0, willCheckBytes);
             byte checksumByte1 = (byte) (checksum & 0xff);
             byte checksumByte2 = (byte) ((checksum >> 8) & 0xff);
             checksumBytes = new byte[]{checksumByte1, checksumByte2};
         }
 
         if (frameCtrlData.isEncrypted() && data != null) {
-            byte[] unEncrytedData = new byte[data.size()];
-            for (int i = 0; i < unEncrytedData.length; i++) {
-                unEncrytedData[i] = data.get(i);
-            }
-
             EspAES espAES = new EspAES(mSecretKeyMD5, AES_TRANSFORMATION, generateAESIV(sequence));
-            byte[] encrytedData = espAES.encrypt(unEncrytedData);
-            List<Byte> encrytedDataList = new LinkedList<>();
-            for (byte b : encrytedData) {
-                encrytedDataList.add(b);
-            }
-            data = encrytedDataList;
+            data = espAES.encrypt(data);
         }
         if (data != null) {
-            byteList.addAll(data);
+            byteOS.write(data, 0, data.length);
         }
 
         if (checksumBytes != null) {
-            byteList.add(checksumBytes[0]);
-            byteList.add(checksumBytes[1]);
+            byteOS.write(checksumBytes[0]);
+            byteOS.write(checksumBytes[1]);
         }
 
-        byte[] result = new byte[byteList.size()];
-        for (int i = 0; i < byteList.size(); i++) {
-            result[i] = byteList.get(i);
-        }
-
-        return result;
+        return byteOS.toByteArray();
     }
 
     private int parseNotification(byte[] response, BlufiNotiData notification) {
@@ -515,13 +482,13 @@ class BlufiClientImpl implements BlufiParameter {
             int respChecksum1 = toInt(response[response.length - 1]);
             int respChecksum2 = toInt(response[response.length - 2]);
 
-            List<Byte> checkByteList = new LinkedList<>();
-            checkByteList.add((byte) sequence);
-            checkByteList.add((byte) dataLen);
+            ByteArrayOutputStream checkByteOS = new ByteArrayOutputStream();
+            checkByteOS.write(sequence);
+            checkByteOS.write(dataLen);
             for (byte b : dataBytes) {
-                checkByteList.add(b);
+                checkByteOS.write(b);
             }
-            int checksum = EspCRC.calcCRC16(0, DataUtil.byteListToArray(checkByteList));
+            int checksum = EspCRC.calcCRC16(0, checkByteOS.toByteArray());
 
             int calcChecksum1 = (checksum >> 8) & 0xff;
             int calcChecksum2 = checksum & 0xff;
@@ -622,12 +589,9 @@ class BlufiClientImpl implements BlufiParameter {
 
         BlufiStatusResponse response = new BlufiStatusResponse();
 
-        LinkedList<Byte> dataList = new LinkedList<>();
-        for (byte b : data) {
-            dataList.add(b);
-        }
+        ByteArrayInputStream dataIS = new ByteArrayInputStream(data);
 
-        int opMode = toInt(dataList.poll());
+        int opMode = dataIS.read() & 0xff;
         response.setOpMode(opMode);
         switch (opMode) {
             case OP_MODE_NULL:
@@ -640,18 +604,18 @@ class BlufiClientImpl implements BlufiParameter {
                 break;
         }
 
-        int staConn = toInt(dataList.poll());
+        int staConn = dataIS.read() & 0xff;
         response.setStaConnectionStatus(staConn);
 
-        int softAPConn = toInt(dataList.poll());
+        int softAPConn = dataIS.read() & 0xff;
         response.setSoftAPConnectionCount(softAPConn);
 
-        while (!dataList.isEmpty()) {
-            int infotype = toInt(dataList.poll());
-            int len = toInt(dataList.poll());
+        while (dataIS.available() > 0) {
+            int infotype = dataIS.read() & 0xff;
+            int len = dataIS.read() & 0xff;
             byte[] stateBytes = new byte[len];
             for (int i = 0; i < len; i++) {
-                stateBytes[i] = dataList.poll();
+                stateBytes[i] = (byte) dataIS.read();
             }
 
             parseWifiStateData(response, infotype, stateBytes);
@@ -698,10 +662,7 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void parseWifiScanList(byte[] data) {
-        LinkedList<Byte> dataList = new LinkedList<>();
-        for (Byte b : data) {
-            dataList.add(b);
-        }
+        ByteArrayInputStream dataIS = new ByteArrayInputStream(data);
 
         List<BlufiScanResult> result = new LinkedList<>();
         boolean readLength = true;
@@ -709,12 +670,12 @@ class BlufiClientImpl implements BlufiParameter {
         boolean readSSID = false;
         int length = 0;
         int rssi = 0;
-        List<Byte> ssidList = new LinkedList<>();
-        while (!dataList.isEmpty()) {
-            Byte read = null;
+        ByteArrayOutputStream ssidOS = new ByteArrayOutputStream();
+        while (dataIS.available() > 0) {
+            int read = -1;
             if (readLength) {
-                read = dataList.poll();
-                if (read == null) {
+                read = dataIS.read();
+                if (read == -1) {
                     mLog.d("parseWifiScanList read len null");
                     break;
                 }
@@ -725,8 +686,8 @@ class BlufiClientImpl implements BlufiParameter {
             }
 
             if (readRssi) {
-                read = dataList.poll();
-                if (read == null) {
+                read = dataIS.read();
+                if (read == -1) {
                     mLog.d("parseWifiScanList read rssi null");
                     break;
                 }
@@ -737,22 +698,22 @@ class BlufiClientImpl implements BlufiParameter {
             }
 
             if (readSSID) {
-                read = dataList.poll();
-                if (read == null) {
+                read = dataIS.read();
+                if (read == -1) {
                     mLog.d("parseWifiScanList read ssid null");
                     break;
                 }
 
-                ssidList.add(read);
-                if (ssidList.size() == length - 1) {
+                ssidOS.write(read);
+                if (ssidOS.size() == length - 1) {
                     readSSID = false;
                     readLength = true;
 
                     BlufiScanResult sr = new BlufiScanResult();
                     sr.setType(BlufiScanResult.TYPE_WIFI);
                     sr.setRssi(rssi);
-                    String ssid = new String(DataUtil.byteListToArray(ssidList));
-                    ssidList.clear();
+                    String ssid = new String(ssidOS.toByteArray());
+                    ssidOS.reset();
                     sr.setSsid(ssid);
                     result.add(sr);
                 }
@@ -856,16 +817,16 @@ class BlufiClientImpl implements BlufiParameter {
         byte[] gBytes = DataUtil.byteStringToBytes(g);
         byte[] kBytes = DataUtil.byteStringToBytes(k);
 
-        LinkedList<Byte> dataList = new LinkedList<>();
+        ByteArrayOutputStream dataOS = new ByteArrayOutputStream();
 
         int pgkLength = pBytes.length + gBytes.length + kBytes.length + 6;
         int pgkLen1 = (pgkLength >> 8) & 0xff;
         int pgkLen2 = pgkLength & 0xff;
-        dataList.add(NEG_SET_SEC_TOTAL_LEN);
-        dataList.add((byte) pgkLen1);
-        dataList.add((byte) pgkLen2);
+        dataOS.write(NEG_SET_SEC_TOTAL_LEN);
+        dataOS.write((byte) pgkLen1);
+        dataOS.write((byte) pgkLen2);
         try {
-            boolean postLength = post(false, false, mRequireAck, type, dataList);
+            boolean postLength = post(false, false, mRequireAck, type, dataOS.toByteArray());
             if (!postLength) {
                 return null;
             }
@@ -876,38 +837,32 @@ class BlufiClientImpl implements BlufiParameter {
 
         BlufiUtils.sleep(10);
 
-        dataList.clear();
-        dataList.add(NEG_SET_SEC_ALL_DATA);
+        dataOS.reset();
+        dataOS.write(NEG_SET_SEC_ALL_DATA);
 
         int pLength = pBytes.length;
         int pLen1 = (pLength >> 8) & 0xff;
         int pLen2 = pLength & 0xff;
-        dataList.add((byte) pLen1);
-        dataList.add((byte) pLen2);
-        for (byte b : pBytes) {
-            dataList.add(b);
-        }
+        dataOS.write(pLen1);
+        dataOS.write(pLen2);
+        dataOS.write(pBytes, 0, pLength);
 
         int gLength = gBytes.length;
         int gLen1 = (gLength >> 8) & 0xff;
         int gLen2 = gLength & 0xff;
-        dataList.add((byte) gLen1);
-        dataList.add((byte) gLen2);
-        for (byte b : gBytes) {
-            dataList.add(b);
-        }
+        dataOS.write(gLen1);
+        dataOS.write(gLen2);
+        dataOS.write(gBytes, 0, gLength);
 
         int kLength = kBytes.length;
         int kLen1 = (kLength >> 8) & 0xff;
         int kLen2 = kLength & 0xff;
-        dataList.add((byte) kLen1);
-        dataList.add((byte) kLen2);
-        for (byte b : kBytes) {
-            dataList.add(b);
-        }
+        dataOS.write(kLen1);
+        dataOS.write(kLen2);
+        dataOS.write(kBytes, 0, kLength);
 
         try {
-            boolean postPGK = post(false, false, mRequireAck, type, dataList);
+            boolean postPGK = post(false, false, mRequireAck, type, dataOS.toByteArray());
             if (!postPGK) {
                 return null;
             }
@@ -916,6 +871,7 @@ class BlufiClientImpl implements BlufiParameter {
             return null;
         }
 
+        dataOS.reset();
         return espDH;
     }
 

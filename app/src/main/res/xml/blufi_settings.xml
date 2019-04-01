@@ -20,8 +20,5 @@
         <Preference
             android:key="@string/settings_blufi_version_key"
             android:title="@string/settings_blufi_version_title"/>
-        <Preference
-            android:key="@string/settings_support_protocol_key"
-            android:title="@string/settings_support_protocol_title" />
     </PreferenceCategory>
 </PreferenceScreen>

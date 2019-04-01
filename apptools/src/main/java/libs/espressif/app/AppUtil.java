@@ -100,7 +100,7 @@ public class AppUtil {
             return info.versionName;
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
-            return "Unknow";
+            return "Unknown";
         }
     }
 

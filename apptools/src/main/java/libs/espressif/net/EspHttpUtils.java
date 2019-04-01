@@ -1,5 +1,7 @@
 package libs.espressif.net;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
@@ -10,7 +12,6 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -19,7 +20,6 @@ import java.util.TreeMap;
 import javax.net.ssl.HttpsURLConnection;
 
 import libs.espressif.log.EspLog;
-import libs.espressif.utils.DataUtil;
 
 public class EspHttpUtils {
     public static final String CONNECTION = "Connection";
@@ -256,29 +256,37 @@ public class EspHttpUtils {
             if (values == null || values.isEmpty()) {
                 continue;
             }
-            String value = values.get(0);
+            StringBuilder value = new StringBuilder();
+            int index = 0;
+            for (String v : values) {
+                value.append(v);
+                if (index < values.size() - 1) {
+                    value.append(';');
+                }
+                index++;
+            }
 
-            EspHttpHeader respHeader = new EspHttpHeader(key, value);
+            EspHttpHeader respHeader = new EspHttpHeader(key, value.toString());
             response.setHeader(respHeader);
             log.i(key + ": " + value);
         }
 
         // Get http content
-        LinkedList<Byte> contentList = new LinkedList<>();
+        ByteArrayOutputStream contentOS = new ByteArrayOutputStream();
         InputStream is = connection.getErrorStream() == null ?
                 connection.getInputStream() : connection.getErrorStream();
         try {
             for (int data = is.read(); data != -1; data = is.read()) {
-                contentList.add((byte) data);
+                contentOS.write(data);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-        if (!contentList.isEmpty()) {
-            response.setContent(DataUtil.byteListToArray(contentList));
+        if (contentOS.size() > 0) {
+            response.setContent(contentOS.toByteArray());
             log.i(response.getContentString());
-            contentList.clear();
         }
+        contentOS.close();
 
         return response;
     }
@@ -291,23 +299,30 @@ public class EspHttpUtils {
 
         EspHttpResponse result = new EspHttpResponse();
 
-        List<Byte> dataList = DataUtil.byteArrayToList(data);
-        List<Byte> headerDataList = new LinkedList<>();
-        List<Byte> contentDataList = new LinkedList<>();
+        ByteArrayInputStream dataIS = new ByteArrayInputStream(data);
+        ByteArrayOutputStream headerOS = new ByteArrayOutputStream();
+        ByteArrayOutputStream contentOS = new ByteArrayOutputStream();
         boolean readContent = false;
-        for (Byte b : dataList) {
+        int last1, last2, last3, last4;
+        last1 = last2 = last3 = last4 = -1;
+        for (int read = dataIS.read(); read != -1; read = dataIS.read()) {
             if (!readContent) {
-                headerDataList.add(b);
-                if (headEnd(headerDataList)) {
+                headerOS.write(read);
+
+                last1 = last2;
+                last2 = last3;
+                last3 = last4;
+                last4 = read;
+                if (last1 == '\r' && last2 == '\n' && last3 == '\r' && last4 == '\n') {
+                    // Header End
                     readContent = true;
                 }
             } else {
-                contentDataList.add(b);
+                contentOS.write(read);
             }
         }
-        dataList.clear();
 
-        String headersStr = new String(DataUtil.byteListToArray(headerDataList));
+        String headersStr = new String(headerOS.toByteArray());
         String[] headers = headersStr.split("\r\n");
         if (headers.length <= 0) {
             log.w("no status header");
@@ -353,9 +368,8 @@ public class EspHttpUtils {
             result.setHeader(h);
         }
 
-        if (!contentDataList.isEmpty()) {
-            byte[] content = DataUtil.byteListToArray(contentDataList);
-            result.setContent(content);
+        if (contentOS.size() > 0) {
+            result.setContent(contentOS.toByteArray());
         }
 
         return result;
@@ -363,28 +377,6 @@ public class EspHttpUtils {
 
     private static boolean isEmpty(byte[] data) {
         return data == null || data.length == 0;
-    }
-
-    private static boolean headEnd(List<Byte> bytes) {
-        int size = bytes.size();
-        if (size < 4) {
-            return false;
-        }
-
-        if (bytes.get(size - 1) != '\n') {
-            return false;
-        }
-        if (bytes.get(size - 2) != '\r') {
-            return false;
-        }
-        if (bytes.get(size - 3) != '\n') {
-            return false;
-        }
-        if (bytes.get(size - 4) != '\r') {
-            return false;
-        }
-
-        return true;
     }
 
     private final static class ConstHeader extends EspHttpHeader {

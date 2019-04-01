@@ -285,7 +285,7 @@ public class MainActivity extends AppCompatActivity {
             BluetoothDevice device = mBleList.get(position);
             holder.device = device;
 
-            String name =  device.getName() == null ? "Unknow" : device.getName();
+            String name =  device.getName() == null ? getString(R.string.string_unknown) : device.getName();
             holder.text1.setText(name);
             String info = String.format(Locale.ENGLISH, "%s %d", device.getAddress(), mDeviceRssiMap.get(device));
             holder.text2.setText(info);

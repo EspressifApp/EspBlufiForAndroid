@@ -7,8 +7,8 @@ android {
         applicationId "com.espressif.espblufi"
         minSdkVersion 18
         targetSdkVersion 27
-        versionCode 15
-        versionName "1.3.2"
+        versionCode 17
+        versionName "1.4.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

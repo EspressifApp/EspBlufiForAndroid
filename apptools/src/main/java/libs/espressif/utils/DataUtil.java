@@ -240,6 +240,24 @@ public class DataUtil {
         return result;
     }
 
+    public static List<byte[]> splitBytes(byte[] src, int splitLength) {
+        List<byte[]> result = new ArrayList<>();
+        int offset = 0;
+        do {
+            byte[] split;
+            if (offset + splitLength < src.length) {
+                split = subBytes(src, offset, splitLength);
+            } else {
+                split = subBytes(src, offset);
+            }
+            result.add(split);
+
+            offset += splitLength;
+        } while (offset < src.length);
+
+        return result;
+    }
+
     /**
      * Get a byte array for tlv format
      *

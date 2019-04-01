@@ -14,9 +14,9 @@ public class EspLog {
     }
 
     /**
-     * Set the print lowest level. It will set {@link Level#NIL} if  the level is null.
+     * Set the print lowest level. It will set {@link Level#NIL} if the level is null.
      *
-     * @param level The lowst level can print log.
+     * @param level The lowest level can print log.
      */
     public void setLevel(Level level) {
         if (level == null) {

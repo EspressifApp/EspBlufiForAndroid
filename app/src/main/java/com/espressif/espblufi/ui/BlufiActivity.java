@@ -73,7 +73,7 @@ public class BlufiActivity extends BaseActivity {
         setHomeAsUpEnable(true);
 
         mDevice = getIntent().getParcelableExtra(BlufiConstants.KEY_BLE_DEVICE);
-        String deviceName = mDevice.getName() == null ? "Unknow" : mDevice.getName();
+        String deviceName = mDevice.getName() == null ? getString(R.string.string_unknown) : mDevice.getName();
         setTitle(deviceName);
 
         mMsgRecyclerView = findViewById(R.id.recycler_view);
@@ -394,6 +394,9 @@ public class BlufiActivity extends BaseActivity {
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
             mLog.d(String.format(Locale.ENGLISH, "onMtuChanged status=%d, mtu=%d", status, mtu));
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                if (mBlufiClient != null) {
+                    mBlufiClient.setPostPackageLengthLimit(mtu - 3);
+                }
                 updateMessage(String.format(Locale.ENGLISH, "Set mtu %d complete", mtu), false);
             } else {
                 updateMessage(String.format(Locale.ENGLISH, "Set mtu %d error status %d", mtu, status), false);
@@ -557,26 +560,26 @@ public class BlufiActivity extends BaseActivity {
                 mToast.cancel();
             }
 
-            String msg = "";
+            int msgRes = 0;
             if (v == mBlufiConnectBtn) {
-                msg = "Try connecting device";
+                msgRes = R.string.blufi_function_connect_msg;
             } else if (v == mBlufiDisconnectBtn) {
-                msg = "Disconnect device";
+                msgRes = R.string.blufi_function_disconnect_msg;
             } else if (v == mBlufiSecurityBtn) {
-                msg = "Negotiate security with device";
+                msgRes = R.string.blufi_function_security_msg;
             } else if (v == mBlufiConfigureBtn) {
-                msg = "Configure network for device";
+                msgRes = R.string.blufi_function_configure_msg;
             } else if (v == mBlufiDeviceScanBtn) {
-                msg = "Get ssid list the device scanned";
+                msgRes = R.string.blufi_function_device_scan_msg;
             } else if (v == mBlufiVersionBtn) {
-                msg = "Get the device blufi version";
+                msgRes = R.string.blufi_function_version_msg;
             } else if (v == mBlufiDeviceStatusBtn) {
-                msg = "Get the device status";
+                msgRes = R.string.blufi_function_device_status_msg;
             } else if (v == mBlufiCustomBtn) {
-                msg = "Send custom data to device";
+                msgRes = R.string.blufi_function_custom_msg;
             }
 
-            mToast = Toast.makeText(BlufiActivity.this, msg, Toast.LENGTH_SHORT);
+            mToast = Toast.makeText(BlufiActivity.this, msgRes, Toast.LENGTH_SHORT);
             mToast.show();
 
             return true;

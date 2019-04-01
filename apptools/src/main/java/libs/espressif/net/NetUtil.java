@@ -14,6 +14,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Locale;
 
 import libs.espressif.app.SdkUtil;
 
@@ -53,6 +54,30 @@ public class NetUtil {
             result = InetAddress.getByAddress(byteaddr);
         } catch (UnknownHostException ex) {
             ex.printStackTrace();
+        }
+
+        return result;
+    }
+
+    public static String getIpStringForInt(int ip) {
+        return String.format(Locale.ENGLISH, "%d.%d.%d.%d",
+                ip & 0xff, (ip >> 8) & 0xff, (ip >> 16) & 0xff, (ip >> 24) & 0xff);
+    }
+
+    public static byte[] getIpBytesForInt(int ip) {
+        return new byte[]{
+                (byte) (ip & 0xff),
+                (byte) ((ip >> 8) & 0xff),
+                (byte) ((ip >> 16) & 0xff),
+                (byte) ((ip >> 24) & 0xff)
+        };
+    }
+
+    public static byte[] getMacBytesForString(String mac) {
+        byte[] result = new byte[6];
+        String[] splits = mac.split(":");
+        for (int i = 0; i < result.length; i++) {
+            result[i] = (byte) Integer.parseInt(splits[i], 16);
         }
 
         return result;
@@ -170,9 +195,11 @@ public class NetUtil {
      */
     public static boolean isWifiConnected(Context context) {
         WifiManager wm = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        assert wm != null;
+        if (wm == null) {
+            return false;
+        }
         WifiInfo connection = wm.getConnectionInfo();
-        return connection != null && connection.getNetworkId() != -1;
+        return connection != null && connection.getNetworkId() != -1 && !WIFI_SSID_NONE.equals(connection.getSSID());
     }
 
     /**

@@ -14,13 +14,17 @@ import android.content.Context;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.annotation.RequiresApi;
+import android.util.SparseArray;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import libs.espressif.app.SdkUtil;
+import libs.espressif.utils.DataUtil;
 
 public class EspBleUtils {
     private static final String UUID_INDICATION_DESCRIPTOR = "00002902-0000-1000-8000-00805f9b34fb";
@@ -155,5 +159,37 @@ public class EspBleUtils {
         }
 
         return name;
+    }
+
+    public static List<BleAdvData> resolveScanRecord(byte[] record) {
+        if (record == null) {
+            return Collections.emptyList();
+        }
+
+        List<BleAdvData> result = new ArrayList<>();
+
+        int offset = 0;
+
+        do {
+            int len = record[offset] & 0xff;
+            if (len == 0) {
+                break;
+            }
+            if (offset + 1 + len >= record.length) {
+                break;
+            }
+
+            int type = record[offset + 1] & 0xff;
+            byte[] data = DataUtil.subBytes(record, offset + 2, len - 1);
+
+            BleAdvData advData = new BleAdvData();
+            advData.setType(type);
+            advData.setData(data);
+            result.add(advData);
+
+            offset += (len + 1);
+        } while (offset < record.length);
+
+        return result;
     }
 }

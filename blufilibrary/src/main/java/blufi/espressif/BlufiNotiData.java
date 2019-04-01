@@ -1,8 +1,6 @@
 package blufi.espressif;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.io.ByteArrayOutputStream;
 
 public class BlufiNotiData {
     private int mTypeValue;
@@ -13,10 +11,10 @@ public class BlufiNotiData {
 
     private int mSequence;
 
-    private LinkedList<Byte> mDataList;
+    private ByteArrayOutputStream mDataOS;
 
     public BlufiNotiData() {
-        mDataList = new LinkedList<>();
+        mDataOS = new ByteArrayOutputStream();
     }
 
     public int getType() {
@@ -52,32 +50,21 @@ public class BlufiNotiData {
     }
 
     public void addData(byte b) {
-        mDataList.add(b);
+        mDataOS.write(b);
     }
 
     public void addData(byte[] bytes) {
-        for (byte b : bytes) {
-            mDataList.add(b);
-        }
+        mDataOS.write(bytes, 0, bytes.length);
     }
 
     public byte[] getDataArray() {
-        byte[] result = new byte[mDataList.size()];
-        for (int i = 0; i < result.length; i++) {
-            result[i] = mDataList.get(i);
-        }
-
-        return result;
-    }
-
-    public List<Byte> getDataList() {
-        return new ArrayList<>(mDataList);
+        return mDataOS.toByteArray();
     }
 
     public void clear() {
         mTypeValue = 0;
         mPkgType = 0;
         mSubType = 0;
-        mDataList.clear();
+        mDataOS.reset();
     }
 }

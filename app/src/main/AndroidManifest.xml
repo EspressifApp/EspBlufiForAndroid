@@ -34,6 +34,7 @@
         <activity
             android:name=".ui.ConfigureOptionsActivity"
             android:screenOrientation="portrait"
+            android:label="@string/configure_title"
             android:theme="@style/AppTheme.NoActionBar" />
         <activity
             android:name=".ui.SettingsActivity"

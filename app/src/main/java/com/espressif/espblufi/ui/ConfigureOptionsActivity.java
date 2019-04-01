@@ -86,7 +86,6 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
 
     private SharedPreferences mApPref;
 
-
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
