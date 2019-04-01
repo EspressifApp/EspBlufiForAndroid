@@ -669,7 +669,7 @@ class BlufiClientImpl implements BlufiParameter {
         boolean readRssi = false;
         boolean readSSID = false;
         int length = 0;
-        int rssi = 0;
+        byte rssi = 0;
         ByteArrayOutputStream ssidOS = new ByteArrayOutputStream();
         while (dataIS.available() > 0) {
             int read = -1;
@@ -692,7 +692,7 @@ class BlufiClientImpl implements BlufiParameter {
                     break;
                 }
 
-                rssi = read;
+                rssi = (byte) read;
                 readRssi = false;
                 readSSID = true;
             }

@@ -1,5 +1,10 @@
 # Update Log
 
+## v1.4.0
+- Add Chinese
+- Fix bug on the device which MTU length is too short
+- Optimize the Blufi data generate and parse
+
 ## v1.3.2
 - Fix configure network failed if AP using non-UTF8 character encoding SSID
 
