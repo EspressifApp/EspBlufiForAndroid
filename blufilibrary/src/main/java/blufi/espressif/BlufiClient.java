@@ -19,6 +19,10 @@ public class BlufiClient {
         mImpl = new BlufiClientImpl(this);
     }
 
+    /**
+     * The client to data communication with device which run on Blufi.
+     * When communicate complete, the client should call {@link #close()} to release the resources.
+     */
     public BlufiClient(BluetoothGatt gatt, BluetoothGattCharacteristic writeCharact,
                        BluetoothGattCharacteristic notiCharact, BlufiCallback callback) {
         mImpl = new BlufiClientImpl(this, gatt, writeCharact, notiCharact, callback);

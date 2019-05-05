@@ -4,6 +4,9 @@ This is a demo app to control the ESP device which run on [Blufi](https://github
 ## ESPRSSIF MIT License
 - See [License](ESPRESSIF_MIT_LICENSE)
 
+## Development Documents
+- See [doc](doc)
+
 ## Release APKS
 - See [releases](https://github.com/EspressifApp/EspRelease/tree/master/EspBlufi)
 
