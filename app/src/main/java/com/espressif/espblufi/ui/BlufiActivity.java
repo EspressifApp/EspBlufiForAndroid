@@ -427,7 +427,7 @@ public class BlufiActivity extends BaseActivity {
                     updateMessage("Negotiate security complete", false);
                     break;
                 default:
-                    updateMessage("Negotiate security failed", false);
+                    updateMessage("Negotiate security failed， code=" + status, false);
                     break;
             }
 
@@ -441,7 +441,7 @@ public class BlufiActivity extends BaseActivity {
                     updateMessage("Post configure params complete", false);
                     break;
                 default:
-                    updateMessage("Post configure params failed", false);
+                    updateMessage("Post configure params failed, code=" + status, false);
                     break;
             }
 
@@ -456,7 +456,7 @@ public class BlufiActivity extends BaseActivity {
                             true);
                     break;
                 default:
-                    updateMessage("Device status response error", false);
+                    updateMessage("Device status response error, code=" + status, false);
                     break;
             }
 
@@ -475,7 +475,7 @@ public class BlufiActivity extends BaseActivity {
                     updateMessage(msg.toString(), true);
                     break;
                 default:
-                    updateMessage("Device scan result error", false);
+                    updateMessage("Device scan result error, code=" + status, false);
                     break;
             }
 
@@ -490,7 +490,7 @@ public class BlufiActivity extends BaseActivity {
                             true);
                     break;
                 default:
-                    updateMessage("Device version error", false);
+                    updateMessage("Device version error, code=" + status, false);
                     break;
             }
 
@@ -519,7 +519,7 @@ public class BlufiActivity extends BaseActivity {
                     updateMessage(String.format("Receive custom data:\n%s", customStr), true);
                     break;
                 default:
-                    updateMessage("Receive custom data error", false);
+                    updateMessage("Receive custom data error, code=" + status, false);
                     break;
             }
         }
