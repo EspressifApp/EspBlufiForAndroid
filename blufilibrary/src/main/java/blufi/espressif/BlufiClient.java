@@ -20,7 +20,7 @@ public class BlufiClient {
     }
 
     /**
-     * The client to data communication with device which run on Blufi.
+     * The client to data communication with device which run BluFi.
      * When communicate complete, the client should call {@link #close()} to release the resources.
      */
     public BlufiClient(BluetoothGatt gatt, BluetoothGattCharacteristic writeCharact,

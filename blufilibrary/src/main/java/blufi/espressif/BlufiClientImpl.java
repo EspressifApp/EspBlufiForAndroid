@@ -37,9 +37,6 @@ class BlufiClientImpl implements BlufiParameter {
     private static final int PACKAGE_HEADER_LENGTH = 4;
     private static final int MIN_PACKAGE_LENGTH = 6;
 
-    private static final int DIRECTION_OUTPUT = 0;
-    private static final int DIRECTION_INPUT = 1;
-
     private static final String DH_P = "cf5cf5c38419a724957ff5dd323b9c45c3cdd261eb740f69aa94b8bb1a5c9640" +
             "9153bd76b24222d03274e4725a5406092e9e82e9135c643cae98132b0d95f7d6" +
             "5347c68afc1e677da90e51bbab5f5cf429c291b4ba39c6b2dc5e8c7231e46aa7" +
@@ -234,7 +231,7 @@ class BlufiClientImpl implements BlufiParameter {
         // lt 0 is error, eq 0 is complete, gt 0 is continue
         int parse = parseNotification(data, mNotiData);
         if (parse < 0) {
-            onError(-1);
+            onError(BlufiCallback.CODE_INVALID_NOTIFICATION);
         } else if (parse == 0) {
             parseBlufiNotiData(mNotiData);
             mNotiData = null;
@@ -265,27 +262,6 @@ class BlufiClientImpl implements BlufiParameter {
 
     private int getSubType(int typeValue) {
         return ((typeValue & 0xfc) >> 2);
-    }
-
-    private int getFrameCTRLValue(boolean encrypted, boolean checksum, int direction, boolean requireAck, boolean frag) {
-        int frame = 0;
-        if (encrypted) {
-            frame = frame | (1 << FRAME_CTRL_POSITION_ENCRYPTED);
-        }
-        if (checksum) {
-            frame = frame | (1 << FRAME_CTRL_POSITION_CHECKSUM);
-        }
-        if (direction == DIRECTION_INPUT) {
-            frame = frame | (1 << FRAME_CTRL_POSITION_DATA_DIRECTION);
-        }
-        if (requireAck) {
-            frame = frame | (1 << FRAME_CTRL_POSITION_REQUIRE_ACK);
-        }
-        if (frag) {
-            frame = frame | (1 << FRAME_CTRL_POSITION_FRAG);
-        }
-
-        return frame;
     }
 
     private int generateSendSequence() {
@@ -320,6 +296,7 @@ class BlufiClientImpl implements BlufiParameter {
             return ack == sequence;
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
             return false;
         }
     }
@@ -335,7 +312,7 @@ class BlufiClientImpl implements BlufiParameter {
 
     private boolean postNonData(boolean encrypt, boolean checksum, boolean requireAck, int type)
             throws InterruptedException {
-        int frameCtrl = getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, false);
+        int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, false);
         int sequence = generateSendSequence();
         int dataLen = 0;
 
@@ -360,7 +337,7 @@ class BlufiClientImpl implements BlufiParameter {
             if (postOS.size() >= postDataLengthLimit) {
                 boolean frag = dataIS.available() > 0;
                 if (frag) {
-                    int frameCtrl = getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, true);
+                    int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, true);
                     int sequence = generateSendSequence();
                     int totleLen = postOS.size() + dataIS.available();
                     byte totleLen1 = (byte) (totleLen & 0xff);
@@ -379,13 +356,13 @@ class BlufiClientImpl implements BlufiParameter {
                         return false;
                     }
 
-                    BlufiUtils.sleep(10L);
+                    sleep(10L);
                 }
             }
         }
 
         if (postOS.size() > 0) {
-            int frameCtrl = getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, false);
+            int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, false);
             int sequence = generateSendSequence();
             int postDataLen = postOS.size();
 
@@ -406,7 +383,7 @@ class BlufiClientImpl implements BlufiParameter {
         byteOS.write(sequence);
         byteOS.write(dataLength);
 
-        BlufiParameter.FrameCtrlData frameCtrlData = new BlufiParameter.FrameCtrlData(frameCtrl);
+        FrameCtrlData frameCtrlData = new FrameCtrlData(frameCtrl);
         byte[] checksumBytes = null;
         if (frameCtrlData.isChecksum()) {
             byte[] willCheckBytes = new byte[]{(byte) sequence, (byte) dataLength};
@@ -461,7 +438,7 @@ class BlufiClientImpl implements BlufiParameter {
 
         int frameCtrl = toInt(response[1]);
         notification.setFrameCtrl(frameCtrl);
-        BlufiParameter.FrameCtrlData frameCtrlData = new BlufiParameter.FrameCtrlData(frameCtrl);
+        FrameCtrlData frameCtrlData = new FrameCtrlData(frameCtrl);
 
         int dataLen = toInt(response[3]);
         byte[] dataBytes = new byte[dataLen];
@@ -573,7 +550,7 @@ class BlufiClientImpl implements BlufiParameter {
 
     private void parseVersion(byte[] data) {
         if (data.length != 2) {
-            onVersionResponse(-1, null);
+            onVersionResponse(BlufiCallback.CODE_INVALID_DATA, null);
         }
 
         BlufiVersionResponse response = new BlufiVersionResponse();
@@ -583,7 +560,7 @@ class BlufiClientImpl implements BlufiParameter {
 
     private void parseWifiState(byte[] data) {
         if (data.length < 3) {
-            onStatusResponse(-1, null);
+            onStatusResponse(BlufiCallback.CODE_INVALID_DATA, null);
             return;
         }
 
@@ -738,7 +715,7 @@ class BlufiClientImpl implements BlufiParameter {
         EspDH espDH = postNegotiateSecurity();
         if (espDH == null) {
             mLog.w("negotiateSecurity postNegotiateSecurity failed");
-            onNegotiateSecurityResult(-1);
+            onNegotiateSecurityResult(BlufiCallback.CODE_NEG_POST_FAILED);
             return;
         }
 
@@ -746,25 +723,26 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             devicePublicKey = mDevicePublicKeyQueue.take();
             if (devicePublicKey.bitLength() == 0) {
-                onNegotiateSecurityResult(-1);
+                onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_DEV_KEY);
                 return;
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
             return;
         }
 
         try {
             espDH.generateSecretKey(devicePublicKey);
             if (espDH.getSecretKey() == null) {
-                onNegotiateSecurityResult(-1);
+                onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
                 return;
             }
 
             mSecretKeyMD5 = EspMD5.getMD5Byte(espDH.getSecretKey());
         } catch (InvalidKeySpecException e) {
             e.printStackTrace();
-            onNegotiateSecurityResult(-1);
+            onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
             return;
         }
 
@@ -780,7 +758,7 @@ class BlufiClientImpl implements BlufiParameter {
         if (setSecurity) {
             onNegotiateSecurityResult(BlufiCallback.STATUS_SUCCESS);
         } else {
-            onNegotiateSecurityResult(-1);
+            onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SET_SECURITY);
         }
     }
 
@@ -832,10 +810,11 @@ class BlufiClientImpl implements BlufiParameter {
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
             return null;
         }
 
-        BlufiUtils.sleep(10);
+        sleep(10);
 
         dataOS.reset();
         dataOS.write(NEG_SET_SEC_ALL_DATA);
@@ -868,6 +847,7 @@ class BlufiClientImpl implements BlufiParameter {
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
             return null;
         }
 
@@ -911,6 +891,7 @@ class BlufiClientImpl implements BlufiParameter {
             return post(false, true, mRequireAck, type, postData);
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
             return false;
         }
     }
@@ -933,7 +914,7 @@ class BlufiClientImpl implements BlufiParameter {
         switch (opMode) {
             case OP_MODE_NULL:
                 if (!postDeviceMode(opMode)) {
-                    onConfigureResult(-1);
+                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
                     return;
                 }
 
@@ -941,11 +922,11 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             case OP_MODE_STA:
                 if (!postDeviceMode(opMode)) {
-                    onConfigureResult(-1);
+                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
                     return;
                 }
                 if (!postStaWifiInfo(params)) {
-                    onConfigureResult(-1);
+                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_POST_STA);
                     return;
                 }
 
@@ -953,11 +934,11 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             case OP_MODE_SOFTAP:
                 if (!postDeviceMode(opMode)) {
-                    onConfigureResult(-1);
+                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
                     return;
                 }
                 if (!postSoftAPInfo(params)) {
-                    onConfigureResult(-1);
+                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_POST_SOFTAP);
                     return;
                 }
 
@@ -965,22 +946,22 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             case OP_MODE_STASOFTAP:
                 if (!postDeviceMode(opMode)) {
-                    onConfigureResult(-1);
+                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
                     return;
                 }
                 if (!postStaWifiInfo(params)) {
-                    onConfigureResult(-1);
+                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_POST_STA);
                     return;
                 }
                 if (!postSoftAPInfo(params)) {
-                    onConfigureResult(-1);
+                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_POST_SOFTAP);
                     return;
                 }
 
                 onConfigureResult(BlufiCallback.STATUS_SUCCESS);
                 break;
             default:
-                onConfigureResult(-1);
+                onConfigureResult(BlufiCallback.CODE_CONF_INVALID_OPMODE);
                 break;
         }
     }
@@ -1004,6 +985,7 @@ class BlufiClientImpl implements BlufiParameter {
             return post(mEncrypted, mChecksum, true, type, data);
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
             return false;
         }
     }
@@ -1015,18 +997,19 @@ class BlufiClientImpl implements BlufiParameter {
             if (!post(mEncrypted, mChecksum, mRequireAck, ssidType, ssidBytes)) {
                 return false;
             }
-            BlufiUtils.sleep(10);
+            sleep(10);
 
             int pwdType = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_STA_WIFI_PASSWORD);
             if (!post(mEncrypted, mChecksum, mRequireAck, pwdType, params.getStaPassword().getBytes())) {
                 return false;
             }
-            BlufiUtils.sleep(10);
+            sleep(10);
 
             int comfirmType = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_CONNECT_WIFI);
             return post(false, false, mRequireAck, comfirmType, (byte[]) null);
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
             return false;
         }
     }
@@ -1039,7 +1022,7 @@ class BlufiClientImpl implements BlufiParameter {
                 if (!post(mEncrypted, mChecksum, mRequireAck, ssidType, params.getSoftAPSSID().getBytes())) {
                     return false;
                 }
-                BlufiUtils.sleep(10);
+                sleep(10);
             }
 
             String password = params.getSoftAPPassword();
@@ -1048,7 +1031,7 @@ class BlufiClientImpl implements BlufiParameter {
                 if (!post(mEncrypted, mChecksum, mRequireAck, pwdType, password.getBytes())) {
                     return false;
                 }
-                BlufiUtils.sleep(10);
+                sleep(10);
             }
 
             int channel = params.getSoftAPChannel();
@@ -1057,7 +1040,7 @@ class BlufiClientImpl implements BlufiParameter {
                 if (!post(mEncrypted, mChecksum, mRequireAck, channelType, new byte[]{(byte) channel})) {
                     return false;
                 }
-                BlufiUtils.sleep(10);
+                sleep(10);
             }
 
             int maxConn = params.getSoftAPMaxConnection();
@@ -1066,7 +1049,7 @@ class BlufiClientImpl implements BlufiParameter {
                 if (!post(mEncrypted, mChecksum, mRequireAck, maxConnType, new byte[]{(byte) maxConn})) {
                     return false;
                 }
-                BlufiUtils.sleep(10);
+                sleep(10);
             }
 
             int securityType = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_SOFTAP_AUTH_MODE);
@@ -1074,6 +1057,7 @@ class BlufiClientImpl implements BlufiParameter {
             return post(mEncrypted, mChecksum, mRequireAck, securityType, securityBytes);
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
             return false;
         }
     }
@@ -1096,10 +1080,11 @@ class BlufiClientImpl implements BlufiParameter {
         } catch (InterruptedException e) {
             e.printStackTrace();
             request = false;
+            Thread.currentThread().interrupt();
         }
 
         if (!request) {
-            onVersionResponse(-1, null);
+            onVersionResponse(BlufiCallback.CODE_WRITE_DATA_FAILED, null);
         }
     }
 
@@ -1122,10 +1107,11 @@ class BlufiClientImpl implements BlufiParameter {
         } catch (InterruptedException e) {
             e.printStackTrace();
             request = false;
+            Thread.currentThread().interrupt();
         }
 
         if (!request) {
-            onStatusResponse(-1, null);
+            onStatusResponse(BlufiCallback.CODE_WRITE_DATA_FAILED, null);
         }
     }
 
@@ -1148,10 +1134,11 @@ class BlufiClientImpl implements BlufiParameter {
         } catch (InterruptedException e) {
             e.printStackTrace();
             request = false;
+            Thread.currentThread().interrupt();
         }
 
         if (!request) {
-            onDeviceScanResult(-1, Collections.<BlufiScanResult>emptyList());
+            onDeviceScanResult(BlufiCallback.CODE_WRITE_DATA_FAILED, Collections.<BlufiScanResult>emptyList());
         }
     }
 
@@ -1170,10 +1157,11 @@ class BlufiClientImpl implements BlufiParameter {
         int type = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_CUSTOM_DATA);
         try {
             boolean suc = post(mEncrypted, mChecksum, mRequireAck, type, data);
-            int status = suc ? BlufiCallback.STATUS_SUCCESS : -1;
+            int status = suc ? BlufiCallback.STATUS_SUCCESS : BlufiCallback.CODE_WRITE_DATA_FAILED;
             onPostCustomDataResult(status, data);
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -1205,6 +1193,7 @@ class BlufiClientImpl implements BlufiParameter {
             post(false, false, false, type, (byte[]) null);
         } catch (InterruptedException e) {
             e.printStackTrace();
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -1222,6 +1211,15 @@ class BlufiClientImpl implements BlufiParameter {
         abstract void execute();
 
         void onError(Exception e) {
+        }
+    }
+
+    private void sleep(long timeout) {
+        try {
+            Thread.sleep(timeout);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            Thread.currentThread().interrupt();
         }
     }
 }

@@ -1,3 +1,5 @@
+[[简体中文]](updatelog-zh-rCN.md)
+
 # Update Log
 
 ## v1.4.0

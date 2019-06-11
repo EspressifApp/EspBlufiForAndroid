@@ -1,3 +1,5 @@
+[[English]](updatelog-en.md)
+
 # 更新日志
 
 ## v1.4.0

@@ -1,6 +1,15 @@
 package blufi.espressif.params;
 
+import java.util.UUID;
+
 public interface BlufiParameter {
+    UUID UUID_SERVICE = UUID.fromString("0000ffff-0000-1000-8000-00805f9b34fb");
+    UUID UUID_WRITE_CHARACTERISTIC = UUID.fromString("0000ff01-0000-1000-8000-00805f9b34fb");
+    UUID UUID_NOTIFICATION_CHARACTERISTIC = UUID.fromString("0000ff02-0000-1000-8000-00805f9b34fb");
+
+    int DIRECTION_OUTPUT = 0;
+    int DIRECTION_INPUT = 1;
+
     int OP_MODE_NULL = 0x00;
     int OP_MODE_STA = 0x01;
     int OP_MODE_SOFTAP = 0x02;
@@ -11,12 +20,6 @@ public interface BlufiParameter {
     int SOFTAP_SECURITY_WPA = 0x02;
     int SOFTAP_SECURITY_WPA2 = 0x03;
     int SOFTAP_SECURITY_WPA_WPA2 = 0x04;
-
-    int FRAME_CTRL_POSITION_ENCRYPTED = 0;
-    int FRAME_CTRL_POSITION_CHECKSUM = 1;
-    int FRAME_CTRL_POSITION_DATA_DIRECTION = 2;
-    int FRAME_CTRL_POSITION_REQUIRE_ACK = 3;
-    int FRAME_CTRL_POSITION_FRAG = 4;
 
     byte NEG_SET_SEC_TOTAL_LEN = 0x00;
     byte NEG_SET_SEC_ALL_DATA = 0x01;
@@ -61,34 +64,5 @@ public interface BlufiParameter {
             public static final int SUBTYPE_ERROR = 0x12;
             public static final int SUBTYPE_CUSTOM_DATA = 0x13;
         }
-    }
-
-    class FrameCtrlData {
-        private int mValue;
-
-        public FrameCtrlData(int frameCtrlValue) {
-            mValue = frameCtrlValue;
-        }
-
-        private boolean check(int position) {
-            return ((mValue >> position) & 1) == 1;
-        }
-
-        public boolean isEncrypted() {
-            return check(FRAME_CTRL_POSITION_ENCRYPTED);
-        }
-
-        public boolean isChecksum() {
-            return check(FRAME_CTRL_POSITION_CHECKSUM);
-        }
-
-        public boolean requireAck() {
-            return check(FRAME_CTRL_POSITION_REQUIRE_ACK);
-        }
-
-        public boolean hasFrag() {
-            return check(FRAME_CTRL_POSITION_FRAG);
-        }
-
     }
 }

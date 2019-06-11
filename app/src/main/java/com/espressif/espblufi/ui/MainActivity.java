@@ -4,18 +4,20 @@ import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.graphics.Color;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -78,12 +80,8 @@ public class MainActivity extends AppCompatActivity {
 
         mThreadPool = Executors.newSingleThreadExecutor();
 
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(view -> Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show());
-        fab.setVisibility(View.GONE);
-
         mRefreshLayout = findViewById(R.id.refresh_layout);
+        mRefreshLayout.setColorSchemeResources(R.color.colorAccent);
         mRefreshLayout.setOnRefreshListener(this::scan);
 
         mRecyclerView = findViewById(R.id.recycler_view);
@@ -276,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
         @NonNull
         @Override
         public BleHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = getLayoutInflater().inflate(android.R.layout.simple_list_item_2, parent, false);
+            View view = getLayoutInflater().inflate(R.layout.main_ble_item, parent, false);
             return new BleHolder(view);
         }
 
@@ -287,7 +285,12 @@ public class MainActivity extends AppCompatActivity {
 
             String name =  device.getName() == null ? getString(R.string.string_unknown) : device.getName();
             holder.text1.setText(name);
-            String info = String.format(Locale.ENGLISH, "%s %d", device.getAddress(), mDeviceRssiMap.get(device));
+
+            SpannableStringBuilder info = new SpannableStringBuilder();
+            info.append("Mac:").append(device.getAddress())
+                    .append(" RSSI:").append(String.valueOf(mDeviceRssiMap.get(device)));
+            info.setSpan(new ForegroundColorSpan(0xFF9E9E9E), 0, 21, Spannable.SPAN_EXCLUSIVE_INCLUSIVE);
+            info.setSpan(new ForegroundColorSpan(0xFF8D6E63), 21, info.length(), Spannable.SPAN_EXCLUSIVE_INCLUSIVE);
             holder.text2.setText(info);
         }
 

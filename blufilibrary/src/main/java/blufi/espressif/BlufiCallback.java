@@ -9,6 +9,21 @@ import blufi.espressif.response.BlufiVersionResponse;
 public abstract class BlufiCallback {
     public static final int STATUS_SUCCESS = 0;
 
+    public static final int CODE_INVALID_NOTIFICATION = -1000;
+    public static final int CODE_CATCH_EXCEPTION = -1001;
+    public static final int CODE_WRITE_DATA_FAILED = -1002;
+    public static final int CODE_INVALID_DATA = -1003;
+
+    public static final int CODE_NEG_POST_FAILED = -2000;
+    public static final int CODE_NEG_ERR_DEV_KEY = -2001;
+    public static final int CODE_NEG_ERR_SECURITY = -2002;
+    public static final int CODE_NEG_ERR_SET_SECURITY = -2003;
+
+    public static final int CODE_CONF_INVALID_OPMODE = -3000;
+    public static final int CODE_CONF_ERR_SET_OPMODE = -3001;
+    public static final int CODE_CONF_ERR_POST_STA = -3002;
+    public static final int CODE_CONF_ERR_POST_SOFTAP = -3003;
+
     /**
      * Callback invoked when receive Gatt notification
      *

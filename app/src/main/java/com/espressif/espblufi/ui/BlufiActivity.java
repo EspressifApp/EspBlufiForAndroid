@@ -331,7 +331,7 @@ public class BlufiActivity extends BaseActivity {
             } else {
                 gatt.close();
                 onGattDisconnected();
-                updateMessage(String.format(Locale.ENGLISH, "Disconnect %s, connection error code %d", devAddr, status),
+                updateMessage(String.format(Locale.ENGLISH, "Disconnect %s, status=%d", devAddr, status),
                         false);
             }
         }
@@ -397,9 +397,9 @@ public class BlufiActivity extends BaseActivity {
                 if (mBlufiClient != null) {
                     mBlufiClient.setPostPackageLengthLimit(mtu - 3);
                 }
-                updateMessage(String.format(Locale.ENGLISH, "Set mtu %d complete", mtu), false);
+                updateMessage(String.format(Locale.ENGLISH, "Set mtu complete, mtu=%d ", mtu), false);
             } else {
-                updateMessage(String.format(Locale.ENGLISH, "Set mtu %d error status %d", mtu, status), false);
+                updateMessage(String.format(Locale.ENGLISH, "Set mtu failed, mtu=%d, status=%d", mtu, status), false);
             }
             onGattServiceCharacteristicDiscovered();
         }

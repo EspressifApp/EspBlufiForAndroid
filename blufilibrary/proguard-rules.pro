@@ -15,22 +15,4 @@
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
--ignorewarning
--dontshrink
-
-#保持哪些类不被混淆
--keep class com.esp.iot.blufi.communiation.BlufiCommunicator{*;}
--keep class com.esp.iot.blufi.communiation.IBlufiCommunicator{*;}
--keep class com.esp.iot.blufi.communiation.BlufiConfigureParams{*;}
--keep class com.esp.iot.blufi.communiation.BlufiProtocol{*;}
--keep class com.esp.iot.blufi.communiation.response.**{*;}
-
--keep class blufi.espressif.params.**{*;}
--keep class blufi.espressif.response.**{*;}
--keep class blufi.espressif.BlufiCallback{*;}
--keep class blufi.espressif.BlufiClient{*;}
--keep class blufi.espressif.BlufiUtils{*;}
-
-#保持范型
--keepattributes Signature
 

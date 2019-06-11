@@ -19,6 +19,6 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             app:layoutManager="android.support.v7.widget.LinearLayoutManager"
-            app:reverseLayout="false"/>
+            app:reverseLayout="false" />
     </android.support.v4.widget.SwipeRefreshLayout>
 </android.support.constraint.ConstraintLayout>
