@@ -2,6 +2,9 @@
 
 # Update Log
 
+# v1.4.1
+- Add error code in BluFi callback function，see class BlufiCallback
+
 ## v1.4.0
 - Add Chinese
 - Fix bug on the device which MTU length is too short

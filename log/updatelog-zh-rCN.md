@@ -2,6 +2,9 @@
 
 # 更新日志
 
+# v1.4.1
+- BluFi 回调方法中返回具体的错误码，可参考类 BlufiCallback
+
 ## v1.4.0
 - 增加中文
 - 修复设备端MTU过小的情况下可能出现丢包的Bug
@@ -11,7 +14,7 @@
 - 修复无法配网至使用非UTF-8字符编码SSID的路由器的问题
 
 ## 2018/6/25
-- Blufi通信库开源, 见模块blufilibrary
+- BluFi通信库开源, 见模块blufilibrary
 - 删除BlufiCommunicator
 
 ## v1.3.1
@@ -19,7 +22,7 @@
 
 ## v1.3.0
 - 新交互UI
-- 重构Blufi接口, 设备信息推送实用监听回调
+- 重构BluFi接口, 设备信息推送实用监听回调
 - 类BlufiClient的用法详见类BlufiActivity
 
 ## v1.2.7
