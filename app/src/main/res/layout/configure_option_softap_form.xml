@@ -64,7 +64,7 @@
         </LinearLayout>
     </LinearLayout>
 
-    <android.support.design.widget.TextInputLayout
+    <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/softap_ssid_form"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -76,9 +76,9 @@
             android:hint="@string/configure_softap_ssid"
             android:singleLine="true" />
 
-    </android.support.design.widget.TextInputLayout>
+    </com.google.android.material.textfield.TextInputLayout>
 
-    <android.support.design.widget.TextInputLayout
+    <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/softap_password_form"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -93,6 +93,6 @@
             android:inputType="textPassword"
             android:singleLine="true" />
 
-    </android.support.design.widget.TextInputLayout>
+    </com.google.android.material.textfield.TextInputLayout>
 
 </LinearLayout>

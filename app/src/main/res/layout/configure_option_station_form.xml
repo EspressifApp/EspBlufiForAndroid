@@ -20,7 +20,7 @@
         android:layout_marginTop="15dp"
         android:orientation="horizontal">
 
-        <android.support.design.widget.TextInputLayout
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="0dip"
             android:layout_height="wrap_content"
             android:layout_weight="1"
@@ -33,7 +33,7 @@
                 android:hint="@string/configure_station_ssid"
                 android:singleLine="true" />
 
-        </android.support.design.widget.TextInputLayout>
+        </com.google.android.material.textfield.TextInputLayout>
 
         <ImageButton
             android:id="@+id/station_wifi_scan"
@@ -42,7 +42,7 @@
             android:src="@drawable/configure_refresh_icon" />
     </LinearLayout>
 
-    <android.support.design.widget.TextInputLayout
+    <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/station_wifi_password_form"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -57,5 +57,5 @@
             android:inputType="textPassword"
             android:singleLine="true" />
 
-    </android.support.design.widget.TextInputLayout>
+    </com.google.android.material.textfield.TextInputLayout>
 </LinearLayout>

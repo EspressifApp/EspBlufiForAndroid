@@ -8,7 +8,7 @@
     tools:context=".ui.BlufiActivity"
     tools:showIn="@layout/blufi_activity">
 
-    <android.support.v7.widget.GridLayout
+    <androidx.gridlayout.widget.GridLayout
         android:id="@+id/grid_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -71,16 +71,16 @@
             android:text="@string/blufi_function_custom"
             app:layout_columnWeight="1"
             app:layout_rowWeight="1" />
-    </android.support.v7.widget.GridLayout>
+    </androidx.gridlayout.widget.GridLayout>
 
-    <android.support.v7.widget.RecyclerView
+    <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_above="@id/grid_layout"
         android:layout_alignParentTop="true"
         android:orientation="vertical"
-        app:layoutManager="android.support.v7.widget.LinearLayoutManager"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:reverseLayout="false" />
 
 </RelativeLayout>
