@@ -20,5 +20,8 @@
         <Preference
             android:key="@string/settings_blufi_version_key"
             android:title="@string/settings_blufi_version_title"/>
+        <Preference
+            android:key="@string/settings_upgrade_check_key"
+            android:title="@string/settings_upgrade_check_title"/>
     </PreferenceCategory>
 </PreferenceScreen>

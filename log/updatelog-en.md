@@ -2,7 +2,10 @@
 
 # Update Log
 
-# v1.4.1
+## v1.4.2
+- Add app upgrade option in Settings
+
+## v1.4.1
 - Add error code in BluFi callback function，see class BlufiCallback
 
 ## v1.4.0

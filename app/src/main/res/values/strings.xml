@@ -1,9 +1,9 @@
 <resources>
-    <string name="app_name">EspBlufi</string>
+    <string name="app_name">EspBluFi</string>
 
     <string name="string_unknown">Unknown</string>
 
-    <string name="main_title">EspBlufi</string>
+    <string name="main_title">EspBluFi</string>
     <string name="main_bt_disable_msg">Bluetooth is disable</string>
     <string name="main_location_disable_msg">Location is disable</string>
     <string name="main_menu_settings">Settings</string>
@@ -15,7 +15,7 @@
     <string name="blufi_function_security">Security</string>
     <string name="blufi_function_security_msg">Negotiate security with device</string>
     <string name="blufi_function_version">Version</string>
-    <string name="blufi_function_version_msg">Get the device blufi version</string>
+    <string name="blufi_function_version_msg">Get the device BluFi version</string>
     <string name="blufi_function_device_status">Status</string>
     <string name="blufi_function_device_status_msg">Get the device status</string>
     <string name="blufi_function_configure">Configure</string>
@@ -49,7 +49,7 @@
 
     <string name="settings_title">Settings</string>
     <string name="settings_category_blufi_key">setting_category_blufi</string>
-    <string name="settings_category_blufi_title">Blufi</string>
+    <string name="settings_category_blufi_title">BluFi</string>
     <string name="settings_mtu_length_key">settings_key_mtu_length</string>
     <string name="settings_mtu_length_title">Set mtu length</string>
     <string name="settings_mtu_length_hint">Enter a number great than %1$d</string>
@@ -60,5 +60,14 @@
     <string name="settings_version_key">settings_key_version</string>
     <string name="settings_version_title">APP Version</string>
     <string name="settings_blufi_version_key">settings_key_blufi_version</string>
-    <string name="settings_blufi_version_title">Blufi lib version</string>
+    <string name="settings_blufi_version_title">BluFi lib version</string>
+    <string name="settings_upgrade_check_key">settings_upgrade_check</string>
+    <string name="settings_upgrade_check_title">Check APP latest version</string>
+    <string name="settings_upgrade_check_failed">Get latest release information failed</string>
+    <string name="settings_upgrade_check_not_found">Not found new release</string>
+    <string name="settings_upgrade_check_current_latest">Current APP is latest</string>
+    <string name="settings_upgrade_check_disciver_new">Discover new version APP, Click to download</string>
+    <string name="settings_upgrade_dialog_title">Discover new version</string>
+    <string name="settings_upgrade_dialog_message">Click [Upgrade] to download APK</string>
+    <string name="settings_upgrade_dialog_upgrade">Upgrade</string>
 </resources>

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">EspBlufi</string>
+    <string name="app_name">EspBluFi</string>
 
     <string name="string_unknown">未知</string>
 
-    <string name="main_title">EspBlufi</string>
+    <string name="main_title">EspBluFi</string>
     <string name="main_bt_disable_msg">蓝牙不可用</string>
     <string name="main_location_disable_msg">位置信息(GPS)不可用</string>
     <string name="main_menu_settings">设置</string>
@@ -50,7 +50,7 @@
 
     <string name="settings_title">设置</string>
     <string name="settings_category_blufi_key">setting_category_blufi</string>
-    <string name="settings_category_blufi_title">Blufi</string>
+    <string name="settings_category_blufi_title">BluFi</string>
     <string name="settings_mtu_length_key">settings_key_mtu_length</string>
     <string name="settings_mtu_length_title">设置 mtu 长度</string>
     <string name="settings_mtu_length_hint">设置一个大于 %1$d 的数</string>
@@ -61,5 +61,14 @@
     <string name="settings_version_key">settings_key_version</string>
     <string name="settings_version_title">APP 版本</string>
     <string name="settings_blufi_version_key">settings_key_blufi_version</string>
-    <string name="settings_blufi_version_title">Blufi 库版本</string>
+    <string name="settings_blufi_version_title">BluFi 库版本</string>
+    <string name="settings_upgrade_check_key">settings_upgrade_check</string>
+    <string name="settings_upgrade_check_title">检查更新</string>
+    <string name="settings_upgrade_check_failed">获取最新版本信息失败</string>
+    <string name="settings_upgrade_check_not_found">没有找到更新版本</string>
+    <string name="settings_upgrade_check_current_latest">当前APP已经是最新版本</string>
+    <string name="settings_upgrade_check_disciver_new">发现新版本APP, 点击开始下载</string>
+    <string name="settings_upgrade_dialog_title">发现新版本</string>
+    <string name="settings_upgrade_dialog_message">点击[升级]下载APK</string>
+    <string name="settings_upgrade_dialog_upgrade">升级</string>
 </resources>
