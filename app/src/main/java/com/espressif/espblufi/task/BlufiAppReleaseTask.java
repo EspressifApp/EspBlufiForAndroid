@@ -77,7 +77,7 @@ public class BlufiAppReleaseTask {
                     String apkName = assetName.substring(0, assetName.length() - APK_SUFFIX.length());
                     String[] apkNameSplits = apkName.split("-");
                     String versionName = apkNameSplits[1];
-                    int versionCode = Integer.parseInt(apkNameSplits[2]);
+                    long versionCode = Long.parseLong(apkNameSplits[2]);
 
                     long apkSize = assetJSON.getLong(KEY_SIZE);
                     String downloadUrl = assetJSON.getString(KEY_DOWNLOAD_URL);
@@ -100,12 +100,12 @@ public class BlufiAppReleaseTask {
 
     public static class ReleaseInfo {
         String versionName;
-        int versionCode;
+        long versionCode;
         String downloadUrl;
         long apkSize;
         String notes;
 
-        public int getVersionCode() {
+        public long getVersionCode() {
             return versionCode;
         }
 

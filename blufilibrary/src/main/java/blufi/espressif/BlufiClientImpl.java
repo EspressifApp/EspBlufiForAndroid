@@ -43,12 +43,6 @@ class BlufiClientImpl implements BlufiParameter {
             "728e87664532cdf547be20c9a3fa8342be6e34371a27c06f7dc0edddd2f86373";
     private static final String DH_G = "2";
     private static final String AES_TRANSFORMATION = "AES/CFB/NoPadding";
-    private static final byte[] AES_BASE_IV = {
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00, 0x00, 0x00,
-    };
 
     private final EspLog mLog = new EspLog(getClass());
 
@@ -257,11 +251,11 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private int getPackageType(int typeValue) {
-        return typeValue & 0x3;
+        return typeValue & 0b11;
     }
 
     private int getSubType(int typeValue) {
-        return ((typeValue & 0xfc) >> 2);
+        return ((typeValue & 0b11111100) >> 2);
     }
 
     private int generateSendSequence() {
@@ -270,13 +264,7 @@ class BlufiClientImpl implements BlufiParameter {
 
     private byte[] generateAESIV(int sequence) {
         byte[] result = new byte[16];
-        for (int i = 0; i < result.length; i++) {
-            if (i == 0) {
-                result[0] = (byte) sequence;
-            } else {
-                result[i] = AES_BASE_IV[i];
-            }
-        }
+        result[0] = (byte) sequence;
 
         return result;
     }
@@ -624,7 +612,7 @@ class BlufiClientImpl implements BlufiParameter {
                 response.setSoftAPSSID(softapSSID);
                 break;
             case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_BSSID:
-                String staBssid = DataUtil.bytesToString(data);
+                String staBssid = DataUtil.bigEndianBytesToHexString(data);
                 response.setStaBSSID(staBssid);
                 break;
             case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_SSID:
@@ -791,9 +779,9 @@ class BlufiClientImpl implements BlufiParameter {
             k = getPublicValue(espDH);
         } while (k == null);
 
-        byte[] pBytes = DataUtil.byteStringToBytes(p);
-        byte[] gBytes = DataUtil.byteStringToBytes(g);
-        byte[] kBytes = DataUtil.byteStringToBytes(k);
+        byte[] pBytes = DataUtil.hexStringToBigEndianBytes(p);
+        byte[] gBytes = DataUtil.hexStringToBigEndianBytes(g);
+        byte[] kBytes = DataUtil.hexStringToBigEndianBytes(k);
 
         ByteArrayOutputStream dataOS = new ByteArrayOutputStream();
 
@@ -898,7 +886,7 @@ class BlufiClientImpl implements BlufiParameter {
 
     private class SecurityCallback {
         void onReceiveDevicePublicKey(byte[] keyData) {
-            String keyStr = DataUtil.bytesToString(keyData);
+            String keyStr = DataUtil.bigEndianBytesToHexString(keyData);
             try {
                 BigInteger devicePublicValue = new BigInteger(keyStr, 16);
                 mDevicePublicKeyQueue.add(devicePublicValue);

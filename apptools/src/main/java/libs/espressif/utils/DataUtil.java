@@ -2,7 +2,6 @@ package libs.espressif.utils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 public class DataUtil {
 
@@ -39,6 +38,9 @@ public class DataUtil {
     }
 
     public static boolean equals(byte[] data1, byte[] data2) {
+        if (data1 == data2) {
+            return true;
+        }
         if (data1 == null || data2 == null) {
             return false;
         }
@@ -56,10 +58,45 @@ public class DataUtil {
         return true;
     }
 
-    /**
-     * Convert a hex format byte string to a byte array.
-     */
-    public static byte[] byteStringToBytes(String string) {
+    public static byte[] longToBigEndianBytes(long value, int bytesLength) {
+        byte[] result = new byte[bytesLength];
+        int offset = 0;
+        for (int i = bytesLength - 1; i >= 0; i--) {
+            result[i] = (byte) ((value >> (8 * offset)) & 0xff);
+            offset++;
+        }
+        return result;
+    }
+
+    public static byte[] longToLittleEndianBytes(long value, int byteSize) {
+        byte[] result = new byte[byteSize];
+        for (int i = 0; i < byteSize; i++) {
+            result[i] = (byte) ((value >> (8 * i)) & 0xff);
+        }
+        return result;
+    }
+
+    public static long bigEndianBytesToLong(byte[] bytes) {
+        long result = 0L;
+        for (int index = bytes.length - 1; index >= 0L; index--) {
+            long l = bytes[index] & 0xffL;
+            int offset = (bytes.length - 1 - index) * 8;
+
+            result |= (l << offset);
+        }
+        return result;
+    }
+
+    public static long littleEndianBytesToLong(byte[] bytes) {
+        long result = 0L;
+        for (int i = 0; i < bytes.length; i++) {
+            long l = bytes[i] & 0xffL;
+            result |= (l << (8 * i));
+        }
+        return result;
+    }
+
+    public static byte[] hexStringToBigEndianBytes(String string) {
         if (string.length() % 2 != 0) {
             string = "0" + string;
         }
@@ -70,14 +107,41 @@ public class DataUtil {
         return result;
     }
 
-    /**
-     * Convert a byte arry to a hex format string.
-     */
-    public static String bytesToString(byte[] bytes) {
+    public static byte[] hexStringToLittleEndianBytes(String string) {
+        if (string.length() % 2 != 0) {
+            string = "0" + string;
+        }
+
+        byte[] result = new byte[string.length() / 2];
+        for (int i = 0; i < string.length(); i += 2) {
+            int endIndex = string.length() - i;
+            result[i / 2] = (byte) Integer.parseInt(string.substring(endIndex - 2, endIndex), 16);
+        }
+        return result;
+    }
+
+    public static String bigEndianBytesToHexString(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
-            String byteStr = String.format(Locale.ENGLISH, "%02x", b);
-            sb.append(byteStr);
+            int number = b & 0xff;
+            String str = Integer.toHexString(number);
+            if (str.length() == 1) {
+                sb.append("0");
+            }
+            sb.append(str);
+        }
+        return sb.toString();
+    }
+
+    public static String littleEndianBytesToHexString(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = bytes.length - 1; i >=0; i--) {
+            int number = bytes[i] & 0xff;
+            String str = Integer.toHexString(number);
+            if (str.length() == 1) {
+                sb.append("0");
+            }
+            sb.append(str);
         }
         return sb.toString();
     }

@@ -10,12 +10,12 @@ import android.preference.EditTextPreference;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceFragment;
+import android.preference.PreferenceScreen;
+import android.text.TextUtils;
+
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
-
-import android.preference.PreferenceScreen;
-import android.text.TextUtils;
 
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BaseActivity;
@@ -158,8 +158,8 @@ public class SettingsActivity extends BaseActivity {
                             return;
                         }
 
-                        int currentVersion = AppUtil.getVersionCode(getActivity());
-                        int latestVersion = latestRelease.getVersionCode();
+                        long currentVersion = AppUtil.getVersionCode(getActivity());
+                        long latestVersion = latestRelease.getVersionCode();
                         if (latestVersion > currentVersion) {
                             mVersionCheckPref.setSummary(R.string.settings_upgrade_check_disciver_new);
                             mAppLatestRelease = latestRelease;

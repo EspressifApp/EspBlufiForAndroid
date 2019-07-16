@@ -8,11 +8,6 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
-import androidx.annotation.NonNull;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.RecyclerView;
-import androidx.appcompat.widget.Toolbar;
 import android.text.Spannable;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
@@ -23,6 +18,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BlufiApp;
@@ -91,8 +92,8 @@ public class MainActivity extends AppCompatActivity {
         mScanCallback = new ScanCallback();
 
         mPermissionHelper = new PermissionHelper(this, REQUEST_PERMISSION);
-        mPermissionHelper.setOnPermissionsListener((permission, permited) -> {
-            if (permited && permission.equals(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+        mPermissionHelper.setOnPermissionsListener((permission, granted) -> {
+            if (granted && permission.equals(Manifest.permission.ACCESS_COARSE_LOCATION)) {
                 mRefreshLayout.setRefreshing(true);
                 scan();
             }
@@ -115,14 +116,13 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        switch (requestCode) {
-            case REQUEST_BLUFI:
-                mRefreshLayout.setRefreshing(true);
-                scan();
-                break;
+        if (requestCode == REQUEST_BLUFI) {
+            mRefreshLayout.setRefreshing(true);
+            scan();
+            return;
         }
+
+        super.onActivityResult(requestCode, resultCode, data);
     }
 
     @Override
@@ -133,10 +133,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case MENU_SETTINGS:
-                startActivity(new Intent(this, SettingsActivity.class));
-                return true;
+        final int itemId = item.getItemId();
+        if (itemId == MENU_SETTINGS) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -208,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
         Collections.sort(devices, (dev1, dev2) -> {
             Integer rssi1 = mDeviceRssiMap.get(dev1);
             Integer rssi2 = mDeviceRssiMap.get(dev2);
+            assert rssi1 != null && rssi2 != null;
             return rssi2.compareTo(rssi1);
         });
         runOnUiThread(() -> {

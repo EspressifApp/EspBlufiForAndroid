@@ -1,7 +1,9 @@
 package libs.espressif.app;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.pm.PackageManager;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -26,7 +28,7 @@ public class PermissionHelper {
     }
 
     /**
-     * Call this function in AppCompatActivity#onRequestPermissionsResult.
+     * Call this function in {@link androidx.appcompat.app.AppCompatActivity#onRequestPermissionsResult}.
      *
      * @param requestCode  the request code
      * @param permissions  the request permissions
@@ -87,7 +89,11 @@ public class PermissionHelper {
      * @return granted or not.
      */
     public boolean isPermissionGranted(String permission) {
-        return ContextCompat.checkSelfPermission(mActivity, permission) == PackageManager.PERMISSION_GRANTED;
+        return isPermissionGranted(mActivity, permission);
+    }
+
+    public static boolean isPermissionGranted(Context context, String permission) {
+        return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
     }
 
     /**
@@ -107,7 +113,7 @@ public class PermissionHelper {
         /**
          * Call when the permission has changed.
          *
-         * @param permission the changed permisson.
+         * @param permission the changed permission.
          * @param granted or not.
          */
         void onPermissonsChange(String permission, boolean granted);

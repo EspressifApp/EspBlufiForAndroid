@@ -7,49 +7,40 @@ import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.content.res.Configuration;
 import android.net.Uri;
+
 import androidx.core.content.FileProvider;
 
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.LineNumberReader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-public class AppUtil {
-    /**
-     * Execute a system command.
-     *
-     * @param command the command Android system supported
-     * @return the system log
-     */
-    public static String executeSystemCommand(String command) {
-        String result = "";
-        try {
-            Process pp = Runtime.getRuntime().exec(command);
-            InputStreamReader ir = new InputStreamReader(pp.getInputStream());
-            LineNumberReader input = new LineNumberReader(ir);
+import libs.espressif.utils.DataUtil;
 
-            String line;
-            while ((line = input.readLine()) != null) {
-                result += line.trim();
+public class AppUtil {
+    public static byte[] getSignatureMD5Bytes(Context context) {
+        String packageName = context.getApplicationInfo().packageName;
+        try {
+            byte[] signData;
+            if (SdkUtil.isAtLeastP_28()) {
+                int flag = PackageManager.GET_SIGNING_CERTIFICATES;
+                PackageInfo pi = context.getPackageManager().getPackageInfo(packageName, flag);
+                Signature signature = pi.signingInfo.getApkContentsSigners()[0];
+                signData = signature.toByteArray();
+            } else {
+                int flag = PackageManager.GET_SIGNATURES;
+                PackageInfo pi = context.getPackageManager().getPackageInfo(packageName, flag);
+                Signature signature = (pi.signatures)[0];
+                signData = signature.toByteArray();
             }
 
-            input.close();
-        } catch (IOException e) {
+            MessageDigest digest = MessageDigest.getInstance("md5");
+            digest.update(signData);
+            return digest.digest();
+        } catch (PackageManager.NameNotFoundException | NoSuchAlgorithmException | NullPointerException e) {
             e.printStackTrace();
         }
 
-        return result;
-    }
-
-    /**
-     * Get MAC address.
-     *
-     * @return the phone wifi MAC address.
-     */
-    public static String getWifiMac() {
-        return executeSystemCommand("cat /sys/class/net/wlan0/address");
+        return null;
     }
 
     /**
@@ -57,30 +48,13 @@ public class AppUtil {
      *
      * @return MD5 of the apk keystore.
      */
-    public static String getSignatureMD5(Context context) {
-        String packageName = context.getApplicationInfo().packageName;
-        try {
-            PackageInfo pi = context.getPackageManager().getPackageInfo(packageName, PackageManager.GET_SIGNATURES);
-            Signature signature = (pi.signatures)[0];
-            MessageDigest digest = MessageDigest.getInstance("md5");
-            digest.update(signature.toByteArray());
-            byte[] result = digest.digest();
-            StringBuilder sb = new StringBuilder();
-            for (byte b : result) {
-                int number = b & 0xff;
-                String str = Integer.toHexString(number);
-                if (str.length() == 1) {
-                    sb.append("0");
-                }
-                sb.append(str);
-            }
-
-            return sb.toString();
-        } catch (PackageManager.NameNotFoundException | NoSuchAlgorithmException | NullPointerException e) {
-            e.printStackTrace();
+    public static String getSignatureMD5Hex(Context context) {
+        byte[] data = getSignatureMD5Bytes(context);
+        if (data == null) {
+            return "";
         }
 
-        return "";
+        return DataUtil.bigEndianBytesToHexString(data);
     }
 
     public static boolean isPad(Context context) {
@@ -104,11 +78,11 @@ public class AppUtil {
         }
     }
 
-    public static int getVersionCode(Context context) {
+    public static long getVersionCode(Context context) {
         PackageManager packageManager = context.getPackageManager();
         try {
             PackageInfo info = packageManager.getPackageInfo(context.getPackageName(), 0);
-            return info.versionCode;
+            return SdkUtil.isAtLeastP_28() ? info.getLongVersionCode() : info.versionCode;
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
             return -1;

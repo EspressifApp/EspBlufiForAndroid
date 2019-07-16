@@ -9,7 +9,7 @@ public class EnumUtil {
      * @param <E>       Class Enum
      * @return target name enum
      */
-    public static <E extends Enum<E>> E getEnumWithName(Class<E> enumClass, String nameStr) {
+    public static <E extends Enum<E>> E getEnumForName(Class<E> enumClass, String nameStr) {
         if (enumClass.isEnum()) {
             E[] enums = enumClass.getEnumConstants();
             for (E e : enums) {

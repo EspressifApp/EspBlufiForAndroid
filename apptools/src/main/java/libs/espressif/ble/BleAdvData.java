@@ -24,6 +24,6 @@ public class BleAdvData {
 
     @Override
     public String toString() {
-        return String.format("Adv type=%02x, data=%s", mType, (mData == null ? null : DataUtil.bytesToString(mData)));
+        return String.format("Adv type=%02x, data=%s", mType, (mData == null ? null : DataUtil.bigEndianBytesToHexString(mData)));
     }
 }
