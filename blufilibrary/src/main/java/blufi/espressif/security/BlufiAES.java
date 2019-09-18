@@ -1,4 +1,4 @@
-package libs.espressif.security;
+package blufi.espressif.security;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -11,18 +11,14 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-public class EspAES {
+public class BlufiAES {
     private final byte[] mKey;
     private final byte[] mIV;
     private final String mTransformation;
     private Cipher mEncryptCipher;
     private Cipher mDecryptCipher;
 
-    public EspAES(byte[] key, String transformation) {
-        this(key, transformation, null);
-    }
-
-    public EspAES(byte[] key, String transformation, byte[] iv) {
+    public BlufiAES(byte[] key, String transformation, byte[] iv) {
         mKey = key;
         mIV = iv;
         mTransformation = transformation;

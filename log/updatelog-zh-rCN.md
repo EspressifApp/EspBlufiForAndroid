@@ -2,6 +2,10 @@
 
 # 更新日志
 
+## v1.4.3
+- 将 blufilibrary 模块改为完全独立的模块, 删除 apptools 模块
+- 将 targetSdkVersion 改为 Android Q(29)
+
 # v1.4.2
 - 设置界面内增加 APP 检查更新功能
 

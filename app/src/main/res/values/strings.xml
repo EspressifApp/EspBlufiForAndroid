@@ -52,7 +52,7 @@
     <string name="settings_category_blufi_title">BluFi</string>
     <string name="settings_mtu_length_key">settings_key_mtu_length</string>
     <string name="settings_mtu_length_title">Set mtu length</string>
-    <string name="settings_mtu_length_hint">Enter a number great than %1$d</string>
+    <string name="settings_mtu_length_hint">Enter a number great than 15</string>
     <string name="settings_ble_prefix_key">settings_key_ble_prefix</string>
     <string name="settings_ble_prefix_title">BLE devices filter</string>
     <string name="settings_ble_prefix_hint">Device name start with</string>

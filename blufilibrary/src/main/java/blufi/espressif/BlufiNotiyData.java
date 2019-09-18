@@ -2,7 +2,7 @@ package blufi.espressif;
 
 import java.io.ByteArrayOutputStream;
 
-public class BlufiNotiData {
+public class BlufiNotiyData {
     private int mTypeValue;
     private int mPkgType;
     private int mSubType;
@@ -11,7 +11,7 @@ public class BlufiNotiData {
 
     private ByteArrayOutputStream mDataOS;
 
-    public BlufiNotiData() {
+    public BlufiNotiyData() {
         mDataOS = new ByteArrayOutputStream();
     }
 

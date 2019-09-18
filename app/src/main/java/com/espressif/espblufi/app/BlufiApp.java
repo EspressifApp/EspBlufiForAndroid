@@ -7,10 +7,8 @@ import android.content.SharedPreferences;
 import com.espressif.espblufi.constants.SettingsConstants;
 
 import java.util.HashMap;
-import java.util.Random;
+import java.util.HashSet;
 import java.util.Set;
-
-import libs.espressif.utils.RandomUtil;
 
 public class BlufiApp extends Application {
     private static BlufiApp instance;
@@ -41,26 +39,6 @@ public class BlufiApp extends Application {
         mCache.clear();
     }
 
-    public String putCache(Object value) {
-        synchronized (mCache) {
-            int keyLength = new Random().nextInt(20) + 20;
-            String key = RandomUtil.randomString(keyLength);
-            mCache.put(key, value);
-            return key;
-        }
-    }
-
-    public Object takeCache(String key) {
-        synchronized (mCache) {
-            Object result = mCache.get(key);
-            if (result != null) {
-                mCache.remove(key);
-            }
-
-            return result;
-        }
-    }
-
     public boolean settingsPut(String key, Object value) {
         SharedPreferences.Editor editor = mSettingsShared.edit();
         if (value instanceof String) {
@@ -75,12 +53,11 @@ public class BlufiApp extends Application {
             editor.putLong(key, (Long) value);
         } else if (value instanceof Set) {
             Set set = (Set) value;
-            if (!set.isEmpty()) {
-                if (!(set.iterator().next() instanceof String)) {
-                    return false;
-                }
+            Set<String> newSet = new HashSet<>();
+            for (Object object : set) {
+                newSet.add((String)object);
             }
-            editor.putStringSet(key, (Set<String>)set);
+            editor.putStringSet(key, newSet);
         } else {
             return false;
         }
@@ -101,6 +78,7 @@ public class BlufiApp extends Application {
         } else if (defaultValue instanceof Long) {
             return mSettingsShared.getLong(key, (Long) defaultValue);
         } else if (defaultValue instanceof Set) {
+            //noinspection unchecked
             return mSettingsShared.getStringSet(key, (Set<String>) defaultValue);
         } else {
             return null;

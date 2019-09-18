@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Intent;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -39,13 +40,12 @@ import blufi.espressif.params.BlufiConfigureParams;
 import blufi.espressif.response.BlufiScanResult;
 import blufi.espressif.response.BlufiStatusResponse;
 import blufi.espressif.response.BlufiVersionResponse;
-import libs.espressif.app.SdkUtil;
-import libs.espressif.log.EspLog;
+import tools.xxj.phiman.log.XxjLog;
 
 public class BlufiActivity extends BaseActivity {
     private static final int REQUEST_CONFIGURE = 0x20;
 
-    private final EspLog mLog = new EspLog(getClass());
+    private final XxjLog mLog = new XxjLog(getClass());
 
     private BluetoothDevice mDevice;
     private BluetoothGatt mGatt;
@@ -180,7 +180,7 @@ public class BlufiActivity extends BaseActivity {
             mGatt.close();
         }
         GattCallback callback = new GattCallback();
-        if (SdkUtil.isAtLeastM_23()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             mGatt = mDevice.connectGatt(this, false, callback, BluetoothDevice.TRANSPORT_LE);
         } else {
             mGatt = mDevice.connectGatt(this, false, callback);
@@ -321,7 +321,7 @@ public class BlufiActivity extends BaseActivity {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 switch (newState) {
                     case BluetoothProfile.STATE_CONNECTED:
-                        if (SdkUtil.isAtLeastL_21()) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                             gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
                             int mtu = (int) BlufiApp.getInstance().settingsGet(
                                     SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);

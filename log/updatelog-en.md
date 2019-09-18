@@ -2,6 +2,10 @@
 
 # Update Log
 
+## v1.4.3
+- Make blufilibrary module fully independent, delete apptools module
+- Change targetSdkVersion to Android Q(29)
+
 ## v1.4.2
 - Add app upgrade option in Settings
 

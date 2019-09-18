@@ -8,7 +8,7 @@ This is a demo app to control the ESP device which run [BluFi](https://github.co
 - See [doc](doc/Introduction_to_the_EspBlufi_API_Interface_for_Android__en.md)
 
 ## Release APKS
-- See [releases](https://github.com/EspressifApp/EspRelease/tree/master/EspBlufi)
+- See [releases](https://github.com/EspressifApp/EspBlufiForAndroid/releases)
 
 ## Update Log
 - See [Log](log/updatelog-en.md)

@@ -39,8 +39,8 @@ import blufi.espressif.params.BlufiParameter;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
-import libs.espressif.log.EspLog;
-import libs.espressif.net.NetUtil;
+import tools.xxj.phiman.log.XxjLog;
+import tools.xxj.phiman.net.XxjNetUtil;
 
 public class ConfigureOptionsActivity extends BaseActivity implements AdapterView.OnItemSelectedListener {
     private static final int OP_MODE_POS_STA = 0;
@@ -62,7 +62,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
 
     private static final String PREF_AP = "blufi_conf_aps";
 
-    private EspLog mLog = new EspLog(getClass());
+    private XxjLog mLog = new XxjLog(getClass());
 
     private Spinner mDeviceModeSp;
 
@@ -141,7 +141,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
         mStationSsidET.setText(getConnectionSSID());
         WifiInfo info = ((WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE)).getConnectionInfo();
         if (info != null) {
-            byte[] ssidBytes = NetUtil.getOriginalSsidBytes(info);
+            byte[] ssidBytes = XxjNetUtil.getOriginalSsidBytes(info);
             mStationSsidET.setTag(ssidBytes);
         }
 
@@ -323,7 +323,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
                 .setSingleChoiceItems(wifiSSIDs, checkedItem, (dialog, which) -> {
                     mStationSsidET.setText(wifiSSIDs[which]);
                     ScanResult scanResult = mWifiList.get(which);
-                    byte[] ssidBytes = NetUtil.getOriginalSsidBytes(scanResult);
+                    byte[] ssidBytes = XxjNetUtil.getOriginalSsidBytes(scanResult);
                     mStationSsidET.setTag(ssidBytes);
                     dialog.dismiss();
                 })
@@ -383,7 +383,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
                 }
             }
         }
-        if (NetUtil.is5GHz(freq)) {
+        if (XxjNetUtil.is5GHz(freq)) {
             mStationSsidET.setError(getString(R.string.configure_station_wifi_5g_error));
             new AlertDialog.Builder(this)
                     .setMessage(R.string.configure_station_wifi_5g_dialog_message)

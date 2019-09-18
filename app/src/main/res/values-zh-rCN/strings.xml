@@ -53,7 +53,7 @@
     <string name="settings_category_blufi_title">BluFi</string>
     <string name="settings_mtu_length_key">settings_key_mtu_length</string>
     <string name="settings_mtu_length_title">设置 mtu 长度</string>
-    <string name="settings_mtu_length_hint">设置一个大于 %1$d 的数</string>
+    <string name="settings_mtu_length_hint">设置一个大于 15 的数</string>
     <string name="settings_ble_prefix_key">settings_key_ble_prefix</string>
     <string name="settings_ble_prefix_title">BLE 设备过滤</string>
     <string name="settings_ble_prefix_hint">设备名前缀</string>

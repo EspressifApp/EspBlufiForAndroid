@@ -1,27 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
-    <PreferenceCategory
-        android:key="@string/settings_category_blufi_key"
-        android:title="@string/settings_category_blufi_title">
-        <EditTextPreference
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    app:iconSpaceReserved="false">
+    <androidx.preference.PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:key="@string/settings_category_blufi_key"
+        app:title="@string/settings_category_blufi_title">
+        <androidx.preference.EditTextPreference
+            android:hint="@string/settings_mtu_length_hint"
             android:inputType="number"
-            android:key="@string/settings_mtu_length_key"
-            android:title="@string/settings_mtu_length_title" />
-        <EditTextPreference
+            app:iconSpaceReserved="false"
+            app:key="@string/settings_mtu_length_key"
+            app:title="@string/settings_mtu_length_title" />
+        <androidx.preference.EditTextPreference
             android:hint="@string/settings_ble_prefix_hint"
-            android:key="@string/settings_ble_prefix_key"
-            android:title="@string/settings_ble_prefix_title" />
-    </PreferenceCategory>
+            app:iconSpaceReserved="false"
+            app:key="@string/settings_ble_prefix_key"
+            app:title="@string/settings_ble_prefix_title" />
+    </androidx.preference.PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/settings_category_version_title">
-        <Preference
-            android:key="@string/settings_version_key"
-            android:title="@string/settings_version_title" />
-        <Preference
-            android:key="@string/settings_blufi_version_key"
-            android:title="@string/settings_blufi_version_title"/>
-        <Preference
-            android:key="@string/settings_upgrade_check_key"
-            android:title="@string/settings_upgrade_check_title"/>
-    </PreferenceCategory>
-</PreferenceScreen>
+    <androidx.preference.PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/settings_category_version_title">
+        <androidx.preference.Preference
+            app:iconSpaceReserved="false"
+            app:key="@string/settings_version_key"
+            app:title="@string/settings_version_title" />
+        <androidx.preference.Preference
+            app:iconSpaceReserved="false"
+            app:key="@string/settings_blufi_version_key"
+            app:title="@string/settings_blufi_version_title" />
+        <androidx.preference.Preference
+            app:iconSpaceReserved="false"
+            app:key="@string/settings_upgrade_check_key"
+            app:title="@string/settings_upgrade_check_title" />
+    </androidx.preference.PreferenceCategory>
+</androidx.preference.PreferenceScreen>

@@ -1,1 +1,2 @@
-include ':app', ':blufilibrary', ':apptools'
+include ':app'
+include ':blufilibrary'

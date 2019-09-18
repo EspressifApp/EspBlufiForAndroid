@@ -6,16 +6,15 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.preference.EditTextPreference;
-import android.preference.Preference;
-import android.preference.PreferenceCategory;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceScreen;
 import android.text.TextUtils;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
+import androidx.preference.EditTextPreference;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceCategory;
+import androidx.preference.PreferenceFragmentCompat;
 
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BaseActivity;
@@ -30,7 +29,7 @@ import blufi.espressif.BlufiClient;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
-import libs.espressif.app.AppUtil;
+import tools.xxj.phiman.app.XxjAppUtils;
 
 public class SettingsActivity extends BaseActivity {
 
@@ -42,10 +41,10 @@ public class SettingsActivity extends BaseActivity {
         setSupportActionBar(toolbar);
         setHomeAsUpEnable(true);
 
-        getFragmentManager().beginTransaction().replace(R.id.frame, new SettingsFragment()).commit();
+        getSupportFragmentManager().beginTransaction().replace(R.id.frame, new SettingsFragment()).commit();
     }
 
-    public static class SettingsFragment extends PreferenceFragment implements Preference.OnPreferenceChangeListener {
+    public static class SettingsFragment extends PreferenceFragmentCompat implements Preference.OnPreferenceChangeListener {
         private static final String KEY_MTU_LENGTH = SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH;
         private static final String KEY_BLE_PREFIX = SettingsConstants.PREF_SETTINGS_KEY_BLE_PREFIX;
 
@@ -58,22 +57,24 @@ public class SettingsActivity extends BaseActivity {
         private volatile BlufiAppReleaseTask.ReleaseInfo mAppLatestRelease;
 
         @Override
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            setPreferencesFromResource(R.xml.blufi_settings, rootKey);
+        }
+
+        @Override
         public void onCreate(Bundle savedInstanceState) {
             super.onCreate(savedInstanceState);
-
-            addPreferencesFromResource(R.xml.blufi_settings);
 
             mApp = BlufiApp.getInstance();
 
             findPreference(getString(R.string.settings_version_key)).setSummary(getVersionName());
             findPreference(getString(R.string.settings_blufi_version_key)).setSummary(BlufiClient.VERSION);
 
-            mMtuPref = (EditTextPreference) findPreference(getString(R.string.settings_mtu_length_key));
+            mMtuPref = findPreference(getString(R.string.settings_mtu_length_key));
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                PreferenceCategory blufiCategory = (PreferenceCategory) findPreference(getString(R.string.settings_category_blufi_key));
+                PreferenceCategory blufiCategory = findPreference(getString(R.string.settings_category_blufi_key));
                 blufiCategory.removePreference(mMtuPref);
             } else {
-                mMtuPref.getEditText().setHint(getString(R.string.settings_mtu_length_hint, BlufiConstants.MIN_MTU_LENGTH));
                 int mtuLen = (int) mApp.settingsGet(KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
                 mMtuPref.setOnPreferenceChangeListener(this);
                 if (mtuLen >= BlufiConstants.MIN_MTU_LENGTH) {
@@ -81,7 +82,7 @@ public class SettingsActivity extends BaseActivity {
                 }
             }
 
-            mBlePrefixPref = (EditTextPreference) findPreference(getString(R.string.settings_ble_prefix_key));
+            mBlePrefixPref = findPreference(getString(R.string.settings_ble_prefix_key));
             mBlePrefixPref.setOnPreferenceChangeListener(this);
             String blePrefix = (String) mApp.settingsGet(KEY_BLE_PREFIX, BlufiConstants.BLUFI_PREFIX);
             mBlePrefixPref.setSummary(blePrefix);
@@ -89,7 +90,7 @@ public class SettingsActivity extends BaseActivity {
             mVersionCheckPref = findPreference(getString(R.string.settings_upgrade_check_key));
         }
 
-        public String getVersionName() {
+        private String getVersionName() {
             String version;
             try {
                 PackageInfo pi = getActivity().getPackageManager().getPackageInfo(getActivity().getPackageName(), 0);
@@ -102,7 +103,7 @@ public class SettingsActivity extends BaseActivity {
         }
 
         @Override
-        public boolean onPreferenceTreeClick(PreferenceScreen preferenceScreen, Preference preference) {
+        public boolean onPreferenceTreeClick(Preference preference) {
             if (preference == mVersionCheckPref) {
                 if (mAppLatestRelease == null) {
                     mVersionCheckPref.setEnabled(false);
@@ -113,7 +114,7 @@ public class SettingsActivity extends BaseActivity {
                 return true;
             }
 
-            return super.onPreferenceTreeClick(preferenceScreen, preference);
+            return super.onPreferenceTreeClick(preference);
         }
 
         @Override
@@ -158,7 +159,7 @@ public class SettingsActivity extends BaseActivity {
                             return;
                         }
 
-                        long currentVersion = AppUtil.getVersionCode(getActivity());
+                        long currentVersion = XxjAppUtils.getVersionCode(getActivity());
                         long latestVersion = latestRelease.getVersionCode();
                         if (latestVersion > currentVersion) {
                             mVersionCheckPref.setSummary(R.string.settings_upgrade_check_disciver_new);

@@ -5,11 +5,11 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
+import android.util.Log;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
-import java.security.spec.InvalidKeySpecException;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -25,14 +25,14 @@ import blufi.espressif.params.BlufiParameter;
 import blufi.espressif.response.BlufiScanResult;
 import blufi.espressif.response.BlufiStatusResponse;
 import blufi.espressif.response.BlufiVersionResponse;
-import libs.espressif.log.EspLog;
-import libs.espressif.security.EspAES;
-import libs.espressif.security.EspCRC;
-import libs.espressif.security.EspDH;
-import libs.espressif.security.EspMD5;
-import libs.espressif.utils.DataUtil;
+import blufi.espressif.security.BlufiAES;
+import blufi.espressif.security.BlufiCRC;
+import blufi.espressif.security.BlufiDH;
+import blufi.espressif.security.BlufiMD5;
 
 class BlufiClientImpl implements BlufiParameter {
+    private static final String TAG = "BlufiClientImpl";
+
     private static final int DEFAULT_PACKAGE_LENGTH = 20;
     private static final int PACKAGE_HEADER_LENGTH = 4;
     private static final int MIN_PACKAGE_LENGTH = 6;
@@ -43,8 +43,6 @@ class BlufiClientImpl implements BlufiParameter {
             "728e87664532cdf547be20c9a3fa8342be6e34371a27c06f7dc0edddd2f86373";
     private static final String DH_G = "2";
     private static final String AES_TRANSFORMATION = "AES/CFB/NoPadding";
-
-    private final EspLog mLog = new EspLog(getClass());
 
     private BlufiClient mClient;
 
@@ -61,7 +59,7 @@ class BlufiClientImpl implements BlufiParameter {
     private AtomicInteger mReadSequence;
     private LinkedBlockingQueue<Integer> mAck;
 
-    private volatile BlufiNotiData mNotiData;
+    private volatile BlufiNotiyData mNotiyData;
 
     private byte[] mSecretKeyMD5;
 
@@ -217,18 +215,18 @@ class BlufiClientImpl implements BlufiParameter {
             return;
         }
 
-        if (mNotiData == null) {
-            mNotiData = new BlufiNotiData();
+        if (mNotiyData == null) {
+            mNotiyData = new BlufiNotiyData();
         }
 
         byte[] data = characteristic.getValue();
         // lt 0 is error, eq 0 is complete, gt 0 is continue
-        int parse = parseNotification(data, mNotiData);
+        int parse = parseNotification(data, mNotiyData);
         if (parse < 0) {
             onError(BlufiCallback.CODE_INVALID_NOTIFICATION);
         } else if (parse == 0) {
-            parseBlufiNotiData(mNotiData);
-            mNotiData = null;
+            parseBlufiNotiData(mNotiyData);
+            mNotiyData = null;
         }
     }
 
@@ -242,8 +240,40 @@ class BlufiClientImpl implements BlufiParameter {
         }
     }
 
+    private void logd(String msg) {
+        Log.d(TAG, msg);
+    }
+
+    private void logw(String msg) {
+        Log.w(TAG, msg);
+    }
+
     private int toInt(byte b) {
         return b & 0xff;
+    }
+
+    private String toHex(byte[] bytes) {
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            int number = b & 0xff;
+            String str = Integer.toHexString(number);
+            if (str.length() == 1) {
+                sb.append("0");
+            }
+            sb.append(str);
+        }
+        return sb.toString();
+    }
+
+    private byte[] toBytes(String hex) {
+        if (hex.length() % 2 != 0) {
+            hex = "0" + hex;
+        }
+        byte[] result = new byte[hex.length() / 2];
+        for (int i = 0; i < hex.length(); i += 2) {
+            result[i / 2] = (byte) Integer.parseInt(hex.substring(i, i + 2), 16);
+        }
+        return result;
     }
 
     private int getTypeValue(int type, int subtype) {
@@ -376,16 +406,19 @@ class BlufiClientImpl implements BlufiParameter {
         if (frameCtrlData.isChecksum()) {
             byte[] willCheckBytes = new byte[]{(byte) sequence, (byte) dataLength};
             if (data != null) {
-                willCheckBytes = DataUtil.mergeBytes(willCheckBytes, data);
+                ByteArrayOutputStream os = new ByteArrayOutputStream(willCheckBytes.length + data.length);
+                os.write(willCheckBytes, 0, willCheckBytes.length);
+                os.write(data, 0, data.length);
+                willCheckBytes = os.toByteArray();
             }
-            int checksum = EspCRC.calcCRC16(0, willCheckBytes);
+            int checksum = BlufiCRC.calcCRC(0, willCheckBytes);
             byte checksumByte1 = (byte) (checksum & 0xff);
             byte checksumByte2 = (byte) ((checksum >> 8) & 0xff);
             checksumBytes = new byte[]{checksumByte1, checksumByte2};
         }
 
         if (frameCtrlData.isEncrypted() && data != null) {
-            EspAES espAES = new EspAES(mSecretKeyMD5, AES_TRANSFORMATION, generateAESIV(sequence));
+            BlufiAES espAES = new BlufiAES(mSecretKeyMD5, AES_TRANSFORMATION, generateAESIV(sequence));
             data = espAES.encrypt(data);
         }
         if (data != null) {
@@ -400,20 +433,20 @@ class BlufiClientImpl implements BlufiParameter {
         return byteOS.toByteArray();
     }
 
-    private int parseNotification(byte[] response, BlufiNotiData notification) {
+    private int parseNotification(byte[] response, BlufiNotiyData notification) {
         if (response == null) {
-            mLog.w("parseNotification null data");
+            logw("parseNotification null data");
             return -1;
         }
 
         if (response.length < 4) {
-            mLog.w("parseNotification data length less than 4");
+            logw("parseNotification data length less than 4");
             return -2;
         }
 
         int sequence = toInt(response[2]);
         if (sequence != mReadSequence.incrementAndGet()) {
-            mLog.w("parseNotification read sequence wrong");
+            logw("parseNotification read sequence wrong");
             return -3;
         }
 
@@ -439,7 +472,7 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         if (frameCtrlData.isEncrypted()) {
-            EspAES espAES = new EspAES(mSecretKeyMD5, AES_TRANSFORMATION, generateAESIV(sequence));
+            BlufiAES espAES = new BlufiAES(mSecretKeyMD5, AES_TRANSFORMATION, generateAESIV(sequence));
             dataBytes = espAES.decrypt(dataBytes);
         }
 
@@ -453,7 +486,7 @@ class BlufiClientImpl implements BlufiParameter {
             for (byte b : dataBytes) {
                 checkByteOS.write(b);
             }
-            int checksum = EspCRC.calcCRC16(0, checkByteOS.toByteArray());
+            int checksum = BlufiCRC.calcCRC(0, checkByteOS.toByteArray());
 
             int calcChecksum1 = (checksum >> 8) & 0xff;
             int calcChecksum2 = checksum & 0xff;
@@ -475,7 +508,7 @@ class BlufiClientImpl implements BlufiParameter {
         return frameCtrlData.hasFrag() ? 1 : 0;
     }
 
-    private void parseBlufiNotiData(BlufiNotiData data) {
+    private void parseBlufiNotiData(BlufiNotiyData data) {
         int pkgType = data.getPkgType();
         int subType = data.getSubType();
         if (mUserCallback != null) {
@@ -612,7 +645,7 @@ class BlufiClientImpl implements BlufiParameter {
                 response.setSoftAPSSID(softapSSID);
                 break;
             case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_BSSID:
-                String staBssid = DataUtil.bigEndianBytesToHexString(data);
+                String staBssid = toHex(data);
                 response.setStaBSSID(staBssid);
                 break;
             case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_SSID:
@@ -641,7 +674,7 @@ class BlufiClientImpl implements BlufiParameter {
             if (readLength) {
                 read = dataIS.read();
                 if (read == -1) {
-                    mLog.d("parseWifiScanList read len null");
+                    logd("parseWifiScanList read len null");
                     break;
                 }
 
@@ -653,7 +686,7 @@ class BlufiClientImpl implements BlufiParameter {
             if (readRssi) {
                 read = dataIS.read();
                 if (read == -1) {
-                    mLog.d("parseWifiScanList read rssi null");
+                    logd("parseWifiScanList read rssi null");
                     break;
                 }
 
@@ -665,7 +698,7 @@ class BlufiClientImpl implements BlufiParameter {
             if (readSSID) {
                 read = dataIS.read();
                 if (read == -1) {
-                    mLog.d("parseWifiScanList read ssid null");
+                    logd("parseWifiScanList read ssid null");
                     break;
                 }
 
@@ -689,20 +722,17 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void onError(final int errCode) {
-        mUIHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mUserCallback != null) {
-                    mUserCallback.onError(mClient, errCode);
-                }
+        mUIHandler.post(() -> {
+            if (mUserCallback != null) {
+                mUserCallback.onError(mClient, errCode);
             }
         });
     }
 
     private void __negotiateSecurity() {
-        EspDH espDH = postNegotiateSecurity();
+        BlufiDH espDH = postNegotiateSecurity();
         if (espDH == null) {
-            mLog.w("negotiateSecurity postNegotiateSecurity failed");
+            logw("negotiateSecurity postNegotiateSecurity failed");
             onNegotiateSecurityResult(BlufiCallback.CODE_NEG_POST_FAILED);
             return;
         }
@@ -727,8 +757,8 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             }
 
-            mSecretKeyMD5 = EspMD5.getMD5Byte(espDH.getSecretKey());
-        } catch (InvalidKeySpecException e) {
+            mSecretKeyMD5 = BlufiMD5.getMD5Bytes(espDH.getSecretKey());
+        } catch (Exception e) {
             e.printStackTrace();
             onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
             return;
@@ -751,37 +781,34 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void onNegotiateSecurityResult(final int status) {
-        mUIHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mUserCallback != null) {
-                    mUserCallback.onNegotiateSecurityResult(mClient, status);
-                }
+        mUIHandler.post(() -> {
+            if (mUserCallback != null) {
+                mUserCallback.onNegotiateSecurityResult(mClient, status);
             }
         });
     }
 
-    private EspDH postNegotiateSecurity() {
+    private BlufiDH postNegotiateSecurity() {
         int type = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_NEG);
 
         final int radix = 16;
         final int dhLength = 1024;
         final BigInteger dhP = new BigInteger(DH_P, radix);
         final BigInteger dhG = new BigInteger(DH_G);
-        EspDH espDH;
+        BlufiDH espDH;
         String p;
         String g;
         String k;
         do {
-            espDH = new EspDH(dhP, dhG, dhLength);
+            espDH = new BlufiDH(dhP, dhG, dhLength);
             p = espDH.getP().toString(radix);
             g = espDH.getG().toString(radix);
             k = getPublicValue(espDH);
         } while (k == null);
 
-        byte[] pBytes = DataUtil.hexStringToBigEndianBytes(p);
-        byte[] gBytes = DataUtil.hexStringToBigEndianBytes(g);
-        byte[] kBytes = DataUtil.hexStringToBigEndianBytes(k);
+        byte[] pBytes = toBytes(p);
+        byte[] gBytes = toBytes(g);
+        byte[] kBytes = toBytes(k);
 
         ByteArrayOutputStream dataOS = new ByteArrayOutputStream();
 
@@ -843,7 +870,7 @@ class BlufiClientImpl implements BlufiParameter {
         return espDH;
     }
 
-    private String getPublicValue(EspDH espDH) {
+    private String getPublicValue(BlufiDH espDH) {
         DHPublicKey publicKey = espDH.getPublicKey();
         if (publicKey != null) {
             BigInteger y = publicKey.getY();
@@ -886,7 +913,7 @@ class BlufiClientImpl implements BlufiParameter {
 
     private class SecurityCallback {
         void onReceiveDevicePublicKey(byte[] keyData) {
-            String keyStr = DataUtil.bigEndianBytesToHexString(keyData);
+            String keyStr = toHex(keyData);
             try {
                 BigInteger devicePublicValue = new BigInteger(keyStr, 16);
                 mDevicePublicKeyQueue.add(devicePublicValue);
@@ -955,12 +982,9 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void onConfigureResult(final int status) {
-        mUIHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mUserCallback != null) {
-                    mUserCallback.onConfigureResult(mClient, status);
-                }
+        mUIHandler.post(() -> {
+            if (mUserCallback != null) {
+                mUserCallback.onConfigureResult(mClient, status);
             }
         });
     }
@@ -1050,21 +1074,11 @@ class BlufiClientImpl implements BlufiParameter {
         }
     }
 
-    private byte[] convertAddressStringToByteArray(String address) {
-        String[] splits = address.split(":");
-        byte[] result = new byte[splits.length];
-        for (int i = 0; i < result.length; i++) {
-            result[i] = (byte) Integer.parseInt(splits[i], 16);
-        }
-
-        return result;
-    }
-
     private void __requestDeviceVersion() {
         int type = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_GET_VERSION);
         boolean request;
         try {
-             request = post(mEncrypted, mChecksum, false, type, (byte[]) null);
+            request = post(mEncrypted, mChecksum, false, type, (byte[]) null);
         } catch (InterruptedException e) {
             e.printStackTrace();
             request = false;
@@ -1077,12 +1091,9 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void onVersionResponse(final int status, final BlufiVersionResponse response) {
-        mUIHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mUserCallback != null) {
-                    mUserCallback.onDeviceVersionResponse(mClient, status, response);
-                }
+        mUIHandler.post(() -> {
+            if (mUserCallback != null) {
+                mUserCallback.onDeviceVersionResponse(mClient, status, response);
             }
         });
     }
@@ -1104,12 +1115,9 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void onStatusResponse(final int status, final BlufiStatusResponse response) {
-        mUIHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mUserCallback != null) {
-                    mUserCallback.onDeviceStatusResponse(mClient, status, response);
-                }
+        mUIHandler.post(() -> {
+            if (mUserCallback != null) {
+                mUserCallback.onDeviceStatusResponse(mClient, status, response);
             }
         });
     }
@@ -1131,12 +1139,9 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void onDeviceScanResult(final int status, final List<BlufiScanResult> results) {
-        mUIHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mUserCallback != null) {
-                    mUserCallback.onDeviceScanResult(mClient, status, results);
-                }
+        mUIHandler.post(() -> {
+            if (mUserCallback != null) {
+                mUserCallback.onDeviceScanResult(mClient, status, results);
             }
         });
     }
@@ -1154,23 +1159,17 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void onPostCustomDataResult(final int status, final byte[] data) {
-        mUIHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mUserCallback != null) {
-                    mUserCallback.onPostCustomDataResult(mClient, status, data);
-                }
+        mUIHandler.post(() -> {
+            if (mUserCallback != null) {
+                mUserCallback.onPostCustomDataResult(mClient, status, data);
             }
         });
     }
 
     private void onReceiveCustomData(final int status, final byte[] data) {
-        mUIHandler.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mUserCallback != null) {
-                    mUserCallback.onReceiveCustomData(mClient, status, data);
-                }
+        mUIHandler.post(() -> {
+            if (mUserCallback != null) {
+                mUserCallback.onReceiveCustomData(mClient, status, data);
             }
         });
     }

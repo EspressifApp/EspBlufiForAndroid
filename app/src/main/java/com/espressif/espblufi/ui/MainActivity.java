@@ -3,6 +3,7 @@ package com.espressif.espblufi.ui;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.le.ScanResult;
 import android.content.Intent;
 import android.location.LocationManager;
 import android.os.Build;
@@ -22,6 +23,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.location.LocationManagerCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
@@ -39,10 +41,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import libs.espressif.app.PermissionHelper;
-import libs.espressif.ble.EspBleUtils;
-import libs.espressif.ble.ScanListener;
-import libs.espressif.log.EspLog;
+import tools.xxj.phiman.app.XxjPermissionHelper;
+import tools.xxj.phiman.ble.XxjBleScanListener;
+import tools.xxj.phiman.ble.XxjBleUtils;
+import tools.xxj.phiman.log.XxjLog;
 
 public class MainActivity extends AppCompatActivity {
     private static final long TIMEOUT_SCAN = 4000L;
@@ -52,9 +54,9 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int MENU_SETTINGS = 0x01;
 
-    private final EspLog mLog = new EspLog(getClass());
+    private final XxjLog mLog = new XxjLog(getClass());
 
-    private PermissionHelper mPermissionHelper;
+    private XxjPermissionHelper mPermissionHelper;
 
     private SwipeRefreshLayout mRefreshLayout;
 
@@ -91,14 +93,14 @@ public class MainActivity extends AppCompatActivity {
         mDeviceRssiMap = new HashMap<>();
         mScanCallback = new ScanCallback();
 
-        mPermissionHelper = new PermissionHelper(this, REQUEST_PERMISSION);
+        mPermissionHelper = new XxjPermissionHelper(this, REQUEST_PERMISSION);
         mPermissionHelper.setOnPermissionsListener((permission, granted) -> {
-            if (granted && permission.equals(Manifest.permission.ACCESS_COARSE_LOCATION)) {
+            if (granted && permission.equals(Manifest.permission.ACCESS_FINE_LOCATION)) {
                 mRefreshLayout.setRefreshing(true);
                 scan();
             }
         });
-        mPermissionHelper.requestAuthorities(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION});
+        mPermissionHelper.requestAuthorities(new String[]{Manifest.permission.ACCESS_FINE_LOCATION});
     }
 
     @Override
@@ -151,16 +153,12 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             // Check location enable
             LocationManager locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
-            if (locationManager != null) {
-                boolean locationGPS = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-                boolean locationNetwork = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-                if (!locationGPS && !locationNetwork) {
-                    Toast.makeText(this, R.string.main_location_disable_msg, Toast.LENGTH_SHORT).show();
-                    mRefreshLayout.setRefreshing(false);
-                    return;
-                }
+            boolean locationEnable = locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager);
+            if (!locationEnable) {
+                Toast.makeText(this, R.string.main_location_disable_msg, Toast.LENGTH_SHORT).show();
+                mRefreshLayout.setRefreshing(false);
+                return;
             }
-
         }
 
         mDeviceRssiMap.clear();
@@ -171,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
         mScanStartTime = SystemClock.elapsedRealtime();
 
         mLog.d("Start scan ble");
-        EspBleUtils.startScanBle(mScanCallback);
+        XxjBleUtils.startScanBle(mScanCallback);
         mUpdateFuture = mThreadPool.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
@@ -189,14 +187,14 @@ public class MainActivity extends AppCompatActivity {
                 onIntervalScanUpdate(false);
             }
 
-            EspBleUtils.stopScanBle(mScanCallback);
+            XxjBleUtils.stopScanBle(mScanCallback);
             onIntervalScanUpdate(true);
             mLog.d("Scan ble thread is interrupted");
         });
     }
 
     private void stopScan() {
-        EspBleUtils.stopScanBle(mScanCallback);
+        XxjBleUtils.stopScanBle(mScanCallback);
         if (mUpdateFuture != null) {
             mUpdateFuture.cancel(true);
         }
@@ -253,10 +251,10 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private class ScanCallback implements ScanListener {
+    private class ScanCallback implements XxjBleScanListener {
 
         @Override
-        public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord) {
+        public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord, ScanResult scanResult) {
             String name = device.getName();
             if (!TextUtils.isEmpty(mBlufiFilter)) {
                 if (name == null || !name.startsWith(mBlufiFilter)) {
@@ -282,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
             BluetoothDevice device = mBleList.get(position);
             holder.device = device;
 
-            String name =  device.getName() == null ? getString(R.string.string_unknown) : device.getName();
+            String name = device.getName() == null ? getString(R.string.string_unknown) : device.getName();
             holder.text1.setText(name);
 
             SpannableStringBuilder info = new SpannableStringBuilder();
