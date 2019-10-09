@@ -9,7 +9,6 @@ android {
         targetSdkVersion 29
         versionCode 20
         versionName "1.4.3"
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
         release {
