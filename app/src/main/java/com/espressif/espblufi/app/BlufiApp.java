@@ -6,14 +6,11 @@ import android.content.SharedPreferences;
 
 import com.espressif.espblufi.constants.SettingsConstants;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
 public class BlufiApp extends Application {
     private static BlufiApp instance;
-
-    private final HashMap<String, Object> mCache = new HashMap<>();
 
     private SharedPreferences mSettingsShared;
 
@@ -35,11 +32,9 @@ public class BlufiApp extends Application {
     @Override
     public void onTerminate() {
         super.onTerminate();
-
-        mCache.clear();
     }
 
-    public boolean settingsPut(String key, Object value) {
+    public void settingsPut(String key, Object value) {
         SharedPreferences.Editor editor = mSettingsShared.edit();
         if (value instanceof String) {
             editor.putString(key, (String) value);
@@ -59,11 +54,10 @@ public class BlufiApp extends Application {
             }
             editor.putStringSet(key, newSet);
         } else {
-            return false;
+            throw new IllegalArgumentException("Unsupported value type");
         }
 
         editor.apply();
-        return true;
     }
 
     public Object settingsGet(String key, Object defaultValue) {

@@ -3,8 +3,11 @@ package com.espressif.espblufi.ui;
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanResult;
+import android.bluetooth.le.ScanSettings;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -23,6 +26,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
 import androidx.core.location.LocationManagerCompat;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -32,6 +36,7 @@ import com.espressif.espblufi.app.BlufiApp;
 import com.espressif.espblufi.constants.BlufiConstants;
 import com.espressif.espblufi.constants.SettingsConstants;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -41,10 +46,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import tools.xxj.phiman.app.XxjPermissionHelper;
-import tools.xxj.phiman.ble.XxjBleScanListener;
-import tools.xxj.phiman.ble.XxjBleUtils;
-import tools.xxj.phiman.log.XxjLog;
+import com.espressif.espblufi.app.BlufiLog;
 
 public class MainActivity extends AppCompatActivity {
     private static final long TIMEOUT_SCAN = 4000L;
@@ -54,17 +56,15 @@ public class MainActivity extends AppCompatActivity {
 
     private static final int MENU_SETTINGS = 0x01;
 
-    private final XxjLog mLog = new XxjLog(getClass());
-
-    private XxjPermissionHelper mPermissionHelper;
+    private final BlufiLog mLog = new BlufiLog(getClass());
 
     private SwipeRefreshLayout mRefreshLayout;
 
     private RecyclerView mRecyclerView;
-    private List<BluetoothDevice> mBleList;
+    private List<ScanResult> mBleList;
     private BleAdapter mBleAdapter;
 
-    private Map<BluetoothDevice, Integer> mDeviceRssiMap;
+    private Map<String, ScanResult> mDeviceMap;
     private ScanCallback mScanCallback;
     private String mBlufiFilter;
     private volatile long mScanStartTime;
@@ -90,17 +90,10 @@ public class MainActivity extends AppCompatActivity {
         mBleAdapter = new BleAdapter();
         mRecyclerView.setAdapter(mBleAdapter);
 
-        mDeviceRssiMap = new HashMap<>();
+        mDeviceMap = new HashMap<>();
         mScanCallback = new ScanCallback();
 
-        mPermissionHelper = new XxjPermissionHelper(this, REQUEST_PERMISSION);
-        mPermissionHelper.setOnPermissionsListener((permission, granted) -> {
-            if (granted && permission.equals(Manifest.permission.ACCESS_FINE_LOCATION)) {
-                mRefreshLayout.setRefreshing(true);
-                scan();
-            }
-        });
-        mPermissionHelper.requestAuthorities(new String[]{Manifest.permission.ACCESS_FINE_LOCATION});
+        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSION);
     }
 
     @Override
@@ -113,7 +106,19 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        mPermissionHelper.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        int size = permissions.length;
+        for (int i = 0; i < size; ++i) {
+            String permission = permissions[i];
+            int grant = grantResults[i];
+
+            if (permission.equals(Manifest.permission.ACCESS_FINE_LOCATION)) {
+                if (grant == PackageManager.PERMISSION_GRANTED) {
+                    mRefreshLayout.setRefreshing(true);
+                    scan();
+                }
+            }
+        }
+
     }
 
     @Override
@@ -144,7 +149,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void scan() {
-        if (!BluetoothAdapter.getDefaultAdapter().isEnabled()) {
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        BluetoothLeScanner scanner = adapter.getBluetoothLeScanner();
+        if (!adapter.isEnabled() || scanner == null) {
             Toast.makeText(this, R.string.main_bt_disable_msg, Toast.LENGTH_SHORT).show();
             mRefreshLayout.setRefreshing(false);
             return;
@@ -161,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        mDeviceRssiMap.clear();
+        mDeviceMap.clear();
         mBleList.clear();
         mBleAdapter.notifyDataSetChanged();
         mBlufiFilter = (String) BlufiApp.getInstance().settingsGet(SettingsConstants.PREF_SETTINGS_KEY_BLE_PREFIX,
@@ -169,7 +176,8 @@ public class MainActivity extends AppCompatActivity {
         mScanStartTime = SystemClock.elapsedRealtime();
 
         mLog.d("Start scan ble");
-        XxjBleUtils.startScanBle(mScanCallback);
+        scanner.startScan(null, new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(),
+                mScanCallback);
         mUpdateFuture = mThreadPool.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
@@ -187,14 +195,21 @@ public class MainActivity extends AppCompatActivity {
                 onIntervalScanUpdate(false);
             }
 
-            XxjBleUtils.stopScanBle(mScanCallback);
+            BluetoothLeScanner inScanner = BluetoothAdapter.getDefaultAdapter().getBluetoothLeScanner();
+            if (inScanner != null) {
+                inScanner.stopScan(mScanCallback);
+            }
             onIntervalScanUpdate(true);
             mLog.d("Scan ble thread is interrupted");
         });
     }
 
     private void stopScan() {
-        XxjBleUtils.stopScanBle(mScanCallback);
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        BluetoothLeScanner scanner = adapter.getBluetoothLeScanner();
+        if (scanner != null) {
+            scanner.stopScan(mScanCallback);
+        }
         if (mUpdateFuture != null) {
             mUpdateFuture.cancel(true);
         }
@@ -202,11 +217,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void onIntervalScanUpdate(boolean over) {
-        List<BluetoothDevice> devices = new LinkedList<>(mDeviceRssiMap.keySet());
+        List<ScanResult> devices = new ArrayList<>(mDeviceMap.values());
         Collections.sort(devices, (dev1, dev2) -> {
-            Integer rssi1 = mDeviceRssiMap.get(dev1);
-            Integer rssi2 = mDeviceRssiMap.get(dev2);
-            assert rssi1 != null && rssi2 != null;
+            Integer rssi1 = dev1.getRssi();
+            Integer rssi2 = dev2.getRssi();
             return rssi2.compareTo(rssi1);
         });
         runOnUiThread(() -> {
@@ -225,13 +239,13 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(BlufiConstants.KEY_BLE_DEVICE, device);
         startActivityForResult(intent, REQUEST_BLUFI);
 
-        mDeviceRssiMap.clear();
+        mDeviceMap.clear();
         mBleList.clear();
         mBleAdapter.notifyDataSetChanged();
     }
 
     private class BleHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-        BluetoothDevice device;
+        ScanResult scanResult;
         TextView text1;
         TextView text2;
 
@@ -247,22 +261,38 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onClick(View v) {
             stopScan();
-            gotoDevice(device);
+            gotoDevice(scanResult.getDevice());
         }
     }
 
-    private class ScanCallback implements XxjBleScanListener {
+    private class ScanCallback extends android.bluetooth.le.ScanCallback {
 
         @Override
-        public void onLeScan(BluetoothDevice device, int rssi, byte[] scanRecord, ScanResult scanResult) {
-            String name = device.getName();
+        public void onScanFailed(int errorCode) {
+            super.onScanFailed(errorCode);
+        }
+
+        @Override
+        public void onBatchScanResults(List<ScanResult> results) {
+            for (ScanResult result : results) {
+                onLeScan(result);
+            }
+        }
+
+        @Override
+        public void onScanResult(int callbackType, ScanResult result) {
+            onLeScan(result);
+        }
+
+        private void onLeScan(ScanResult scanResult) {
+            String name = scanResult.getDevice().getName();
             if (!TextUtils.isEmpty(mBlufiFilter)) {
                 if (name == null || !name.startsWith(mBlufiFilter)) {
                     return;
                 }
             }
 
-            mDeviceRssiMap.put(device, rssi);
+            mDeviceMap.put(scanResult.getDevice().getAddress(), scanResult);
         }
     }
 
@@ -277,15 +307,16 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(@NonNull BleHolder holder, int position) {
-            BluetoothDevice device = mBleList.get(position);
-            holder.device = device;
+            ScanResult scanResult = mBleList.get(position);
+            holder.scanResult = scanResult;
 
+            BluetoothDevice device = scanResult.getDevice();
             String name = device.getName() == null ? getString(R.string.string_unknown) : device.getName();
             holder.text1.setText(name);
 
             SpannableStringBuilder info = new SpannableStringBuilder();
             info.append("Mac:").append(device.getAddress())
-                    .append(" RSSI:").append(String.valueOf(mDeviceRssiMap.get(device)));
+                    .append(" RSSI:").append(String.valueOf(scanResult.getRssi()));
             info.setSpan(new ForegroundColorSpan(0xFF9E9E9E), 0, 21, Spannable.SPAN_EXCLUSIVE_INCLUSIVE);
             info.setSpan(new ForegroundColorSpan(0xFF8D6E63), 21, info.length(), Spannable.SPAN_EXCLUSIVE_INCLUSIVE);
             holder.text2.setText(info);

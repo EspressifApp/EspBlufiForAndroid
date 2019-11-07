@@ -4,36 +4,20 @@
 ------
 This guide is a basic introduction to the APIs provided by Espressif to facilitate the customers' secondary development of BluFi.
 
-## BLE Connection
-
-- Call API to establish a BLE connection and obtain `BluetoothGatt`.
-
-    ```java
-    BluetoothGatt gatt;
-    BluetoothGattCallback gattCallback = ; // Gatt callback. Please refer to the GattCallback inner class in BlufiActivity.
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        gatt = bluetoothDevice.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE);
-    } else {
-        gatt = bluetoothDevice.connectGatt(context, false, gattCallback);
-    }
-    ```
-
-- After the connection is established, discover `BluetoothGattService`.
-    - UUID is 0000ffff-0000-1000-8000-00805f9b34fb
-- After the service is discovered, obtain `BluetoothGattCharacteristic`.
-    - `BluetoothGattCharacteristic UUID` 0000ff01-0000-1000-8000-00805f9b34fb is used by the app to write data to the device.
-    - `BluetoothGattCharacteristic UUID` 0000ff02-0000-1000-8000-00805f9b34fb is used by the device to send data/notification to the app.
-    
 ## Communicate with the device using BlufiClient
-
 
 - Create a BlufiClient instance
 
     ```java
-    // BlufiCallback is declared as an abstract class, which can be used to notify the app of the data sent by the device. Please refer to the BlufiCallbackMain inner class in BlufiActivity.
+    BlufiClient client = new BlufiClient(context, device);
 
+    // BlufiCallback is declared as an abstract class, which can be used to notify the app of the data sent by the device. Please refer to the BlufiCallbackMain inner class in BlufiActivity.
     BlufiCallback blufiCallback = ;
-    BlufiClient client = new BlufiClient(gatt, writeCharact, notifyCharact, blufiCallback);
+    client.setBlufiCallback(blufiCallback);
+    
+    // Gatt system callback
+	BluetoothGattCallback gattCallback = ;
+	client.setGattCallback(gattCallback);
     ```
 
     ```java
@@ -56,6 +40,14 @@ This guide is a basic introduction to the APIs provided by Espressif to facilita
     int limit = 128; // Configure the maximum length of each post packet. If the length of a post packet exceeds the maximum packet length, the post packet will be split into fragments.
     client.setPostPackageLengthLimit(limit)
     ```
+
+- Establish a BLE connection
+
+	```java
+	// If establish connection successfully，client will discover service and characteristic for Blufi
+	// client can communicate with Device after receive callback function 'onGattPrepared' in BlufiCallback
+	client.connect();
+	```
 
 - Negotiate data security with the device
 
@@ -235,15 +227,16 @@ This guide is a basic introduction to the APIs provided by Espressif to facilita
 ## Notes on BlufiCallback
 
 ```java
+// Discover Gatt service over
+// Discover failed if service, writeChar or notifyChar is null
+public void onGattPrepared(BlufiClient client, BluetoothGatt gatt, BluetoothGattService service, BluetoothGattCharacteristic writeChar, BluetoothGattCharacteristic notifyChar) {
+}
+
 // Receive the notification of the device
 // false indicates that the processing has not been completed yet and that the procewssing will be transferred to BlufiClient.
 // true indicates that the processing has been completed and there will be no data processing or function calling afterwards.
 public boolean onGattNotification(BlufiClient client, int pkgType, int subType, byte[] data) {
     return false;
-}
-
-// Call this function after BluetoothGatt has been closed
-public void onGattClose(BlufiClient client) {
 }
 
 // Error code sent by the device

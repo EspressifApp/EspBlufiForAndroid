@@ -2,6 +2,11 @@
 
 # Update Log
 
+## v1.5.0
+- Update BlufiClient APIs
+- Update development [doc](../doc)
+- Change minSdkVersion to 21 (Android 5.0)
+
 ## v1.4.3
 - Make blufilibrary module fully independent, delete apptools module
 - Change targetSdkVersion to Android Q(29)

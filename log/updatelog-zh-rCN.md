@@ -2,6 +2,11 @@
 
 # 更新日志
 
+## v1.5.0
+- BlufiClient 接口已升级
+- 开发文档已更新 [doc](../doc)
+- 最低支持版本改为 Android 5.0 (Api Level 21)
+
 ## v1.4.3
 - 将 blufilibrary 模块改为完全独立的模块, 删除 apptools 模块
 - 将 targetSdkVersion 改为 Android Q(29)

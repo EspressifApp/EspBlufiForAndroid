@@ -8,7 +8,6 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Intent;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -40,15 +39,14 @@ import blufi.espressif.params.BlufiConfigureParams;
 import blufi.espressif.response.BlufiScanResult;
 import blufi.espressif.response.BlufiStatusResponse;
 import blufi.espressif.response.BlufiVersionResponse;
-import tools.xxj.phiman.log.XxjLog;
+import com.espressif.espblufi.app.BlufiLog;
 
 public class BlufiActivity extends BaseActivity {
     private static final int REQUEST_CONFIGURE = 0x20;
 
-    private final XxjLog mLog = new XxjLog(getClass());
+    private final BlufiLog mLog = new BlufiLog(getClass());
 
     private BluetoothDevice mDevice;
-    private BluetoothGatt mGatt;
     private BlufiClient mBlufiClient;
     private volatile boolean mConnected;
 
@@ -74,6 +72,7 @@ public class BlufiActivity extends BaseActivity {
         setHomeAsUpEnable(true);
 
         mDevice = getIntent().getParcelableExtra(BlufiConstants.KEY_BLE_DEVICE);
+        assert mDevice != null;
         String deviceName = mDevice.getName() == null ? getString(R.string.string_unknown) : mDevice.getName();
         setTitle(deviceName);
 
@@ -132,9 +131,6 @@ public class BlufiActivity extends BaseActivity {
             mBlufiClient.close();
             mBlufiClient = null;
         }
-        if (mGatt != null) {
-            mGatt.close();
-        }
     }
 
     @Override
@@ -169,22 +165,18 @@ public class BlufiActivity extends BaseActivity {
     /**
      * Try to connect device
      */
-    private void connectGatt() {
+    private void connect() {
         mBlufiConnectBtn.setEnabled(false);
 
         if (mBlufiClient != null) {
             mBlufiClient.close();
             mBlufiClient = null;
         }
-        if (mGatt != null) {
-            mGatt.close();
-        }
-        GattCallback callback = new GattCallback();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            mGatt = mDevice.connectGatt(this, false, callback, BluetoothDevice.TRANSPORT_LE);
-        } else {
-            mGatt = mDevice.connectGatt(this, false, callback);
-        }
+
+        mBlufiClient = new BlufiClient(getApplicationContext(), mDevice);
+        mBlufiClient.setGattCallback(new GattCallback());
+        mBlufiClient.setBlufiCallback(new BlufiCallbackMain());
+        mBlufiClient.connect();
     }
 
     /**
@@ -310,31 +302,14 @@ public class BlufiActivity extends BaseActivity {
      * mBlufiClient call onCharacteristicWrite and onCharacteristicChanged is required
      */
     private class GattCallback extends BluetoothGattCallback {
-        private int mChangedMtu = -1;
-
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             String devAddr = gatt.getDevice().getAddress();
             mLog.d(String.format(Locale.ENGLISH, "onConnectionStateChange addr=%s, status=%d, newState=%d",
                     devAddr, status, newState));
-            mChangedMtu = -1;
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 switch (newState) {
                     case BluetoothProfile.STATE_CONNECTED:
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                            gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
-                            int mtu = (int) BlufiApp.getInstance().settingsGet(
-                                    SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
-                            boolean requestMtu = gatt.requestMtu(mtu);
-                            if (!requestMtu) {
-                                mLog.w("Request mtu failed");
-                                updateMessage(String.format(Locale.ENGLISH, "Request mtu %d failed", mtu), false);
-                                gatt.discoverServices();
-                            }
-                        } else {
-                            gatt.discoverServices();
-                        }
-
                         onGattConnected();
                         updateMessage(String.format("Connected %s", devAddr), false);
                         break;
@@ -356,59 +331,24 @@ public class BlufiActivity extends BaseActivity {
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
             mLog.d(String.format(Locale.ENGLISH, "onMtuChanged status=%d, mtu=%d", status, mtu));
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                mChangedMtu = mtu;
                 updateMessage(String.format(Locale.ENGLISH, "Set mtu complete, mtu=%d ", mtu), false);
+
+                if (mtu > 0 && mBlufiClient != null) {
+                    int blufiPkgLenLimit = mtu - 3;
+                    mLog.d("BluFiClient setPostPackageLengthLimit " + blufiPkgLenLimit);
+                    mBlufiClient.setPostPackageLengthLimit(blufiPkgLenLimit);
+                }
             } else {
                 updateMessage(String.format(Locale.ENGLISH, "Set mtu failed, mtu=%d, status=%d", mtu, status), false);
             }
 
-            gatt.discoverServices();
+            onGattServiceCharacteristicDiscovered();
         }
 
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             mLog.d(String.format(Locale.ENGLISH, "onServicesDiscovered status=%d", status));
-            if (status == BluetoothGatt.GATT_SUCCESS) {
-                BluetoothGattService service = gatt.getService(BlufiConstants.UUID_SERVICE);
-                if (service == null) {
-                    mLog.w("Discover service failed");
-                    gatt.disconnect();
-                    updateMessage("Discover service failed", false);
-                    return;
-                }
-
-                BluetoothGattCharacteristic writeCharact = service.getCharacteristic(BlufiConstants.UUID_WRITE_CHARACTERISTIC);
-                if (writeCharact == null) {
-                    mLog.w("Get write characteristic failed");
-                    gatt.disconnect();
-                    updateMessage("Get write characteristic failed", false);
-                    return;
-                }
-
-                BluetoothGattCharacteristic notifyCharact = service.getCharacteristic(BlufiConstants.UUID_NOTIFICATION_CHARACTERISTIC);
-                if (notifyCharact == null) {
-                    mLog.w("Get notification characteristic failed");
-                    gatt.disconnect();
-                    updateMessage("Get notification characteristic failed", false);
-                    return;
-                }
-
-                updateMessage("Discover service and characteristics success", false);
-
-                if (mBlufiClient != null) {
-                    mBlufiClient.close();
-                }
-                mBlufiClient = new BlufiClient(gatt, writeCharact, notifyCharact, new BlufiCallbackMain());
-                if (mChangedMtu > 0) {
-                    int blufiPkgLenLimit = mChangedMtu - 3;
-                    mLog.d("BluFiClient setPostPackageLengthLimit " + blufiPkgLenLimit);
-                    mBlufiClient.setPostPackageLengthLimit(blufiPkgLenLimit);
-                }
-
-                gatt.setCharacteristicNotification(notifyCharact, true);
-
-                onGattServiceCharacteristicDiscovered();
-            } else {
+            if (status != BluetoothGatt.GATT_SUCCESS) {
                 gatt.disconnect();
                 updateMessage(String.format(Locale.ENGLISH, "Discover services error status %d", status), false);
             }
@@ -416,20 +356,48 @@ public class BlufiActivity extends BaseActivity {
 
         @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            mLog.d("onCharacteristicWrite " + status);
-            // This is requirement
-            mBlufiClient.onCharacteristicWrite(gatt, characteristic, status);
-        }
-
-        @Override
-        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            mLog.d("onCharacteristicChanged");
-            // This is requirement
-            mBlufiClient.onCharacteristicChanged(gatt, characteristic);
+            if (status != BluetoothGatt.GATT_SUCCESS) {
+                gatt.disconnect();
+                updateMessage(String.format(Locale.ENGLISH, "WriteChar error status %d", status), false);
+            }
         }
     }
 
     private class BlufiCallbackMain extends BlufiCallback {
+        @Override
+        public void onGattPrepared(BlufiClient client, BluetoothGatt gatt, BluetoothGattService service,
+                                   BluetoothGattCharacteristic writeChar, BluetoothGattCharacteristic notifyChar) {
+            if (service == null) {
+                mLog.w("Discover service failed");
+                gatt.disconnect();
+                updateMessage("Discover service failed", false);
+                return;
+            }
+            if (writeChar == null) {
+                mLog.w("Get write characteristic failed");
+                gatt.disconnect();
+                updateMessage("Get write characteristic failed", false);
+                return;
+            }
+            if (notifyChar == null) {
+                mLog.w("Get notification characteristic failed");
+                gatt.disconnect();
+                updateMessage("Get notification characteristic failed", false);
+                return;
+            }
+
+            updateMessage("Discover service and characteristics success", false);
+
+            int mtu = (int) BlufiApp.getInstance().settingsGet(
+                    SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
+            boolean requestMtu = gatt.requestMtu(mtu);
+            if (!requestMtu) {
+                mLog.w("Request mtu failed");
+                updateMessage(String.format(Locale.ENGLISH, "Request mtu %d failed", mtu), false);
+                onGattServiceCharacteristicDiscovered();
+            }
+        }
+
         @Override
         public void onNegotiateSecurityResult(BlufiClient client, int status) {
             switch (status) {
@@ -546,7 +514,7 @@ public class BlufiActivity extends BaseActivity {
         @Override
         public void onClick(View v) {
             if (v == mBlufiConnectBtn) {
-                connectGatt();
+                connect();
             } else if (v == mBlufiDisconnectBtn) {
                 disconnectGatt();
             } else if (v == mBlufiSecurityBtn) {

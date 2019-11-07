@@ -6,50 +6,20 @@
 
 为了方便用户进行 Blufi 的二次开发，我司针对 EspBlufi for Android 提供了一些 API 接口。本文档将对这些接口进行简要介绍。
 
-## BLE 连接
-
-- 调用 API 发起 BLE 连接，获得 `BluetoothGatt`。
-
-	```java
-	BluetoothGatt gatt;
-	BluetoothGattCallback gattCallback = ; // 实现 Gatt 回调，可参考 BlufiActivity 内部类 GattCallback
-	if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-	    gatt = bluetoothDevice.connectGatt(context, false, gattCallback, BluetoothDevice.TRANSPORT_LE);
-	} else {
-	    gatt = bluetoothDevice.connectGatt(context, false, gattCallback);
-	}
-	```
-
-- 连接成功后，搜索并获得 `BluetoothGattService`
-    - UUID 为 0000ffff-0000-1000-8000-00805f9b34fb
-- 获得 Service 后，获得 `BluetoothGattCharacteristic`
-    - App 向 Device 写数据的 `BluetoothGattCharacteristic UUID` 为 0000ff01-0000-1000-8000-00805f9b34fb
-    - Device 向 App 推送消息的 `BluetoothGattCharacteristic UUID` 为 0000ff02-0000-1000-8000-00805f9b34fb，使用 Notification 方式
-    
 ## 使用 BlufiClient 与 Device 发起通信
-
 
 - 实例化 BlufiClient
 	
 	```java
+	BlufiClient client = new BlufiClient(context, device);
+
 	// BlufiCallback 为抽象类，回调 Device 通信过程中的数据，实现您自己的需求，可参考 BlufiActivity 的内部类 BlufiCallbackMain
 	BlufiCallback blufiCallback = ;
-	BlufiClient client = new BlufiClient(gatt, writeCharact, notifyCharact, blufiCallback);
-	```
+	client.setBlufiCallback(blufiCallback);
 
-	```java
-	// 需要在之前 BluetoothGattCallback 的两个回调方法中调用 Client 的方法
-	// 若没用调用实例 BlufiClient 的这两个方法，将无法进行数据通信
-	
-	@Override
-	public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-	    client.onCharacteristicWrite(gatt, characteristic, status);
-	}
-	
-	@Override
-	public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-	    client.onCharacteristicChanged(gatt, characteristic);
-	}
+	// Gatt 系统回调
+	BluetoothGattCallback gattCallback = ;
+	client.setGattCallback(gattCallback);
 	```
 
 - 设置 Blufi 发送数据时每包数据的最大长度
@@ -57,6 +27,14 @@
 	```java
 	int limit = 128; // 设置长度限制，若数据超出限制将进行分包发送
 	client.setPostPackageLengthLimit(limit)
+	```
+
+- 与 Device 建立连接
+
+	```java
+	// 若 client 与设备建立连接，client 将主动扫描 Blufi 的服务和特征
+	// 用户在收到 BlufiCallback 回调 onGattPrepared 后才可以与设备发起通信
+	client.connect();
 	```
 
 - 与 Device 协商数据加密
@@ -240,46 +218,47 @@
 ## BlufiCallback 说明
 
 ```java
-	// 收到 Device 的通知数据
-	// 返回 false 表示处理尚未结束，交给 BlufiClient 继续后续处理
-	// 返回 true 表示处理结束，后续将不再解析该数据，也不会调用回调方法
-	public boolean onGattNotification(BlufiClient client, int pkgType, int subType, byte[] data) {
-	    return false;
-	}
-	
-	// BluetoothGatt 关闭时调用
-	public void onGattClose(BlufiClient client) {
-	}
-	
-	// 收到 Device 发出的错误代码
-	public void onError(BlufiClient client, int errCode) {
-	}
-	
-	// 与 Device 协商加密的结果
-	public void onNegotiateSecurityResult(BlufiClient client, int status) {
-	}
-	
-	// 发送配置信息的结果
-	public void onConfigureResult(BlufiClient client, int status) {
-	}
-	
-	// 收到 Device 的版本信息
-	public void onDeviceVersionResponse(BlufiClient client, int status, BlufiVersionResponse response) {
-	}
-	
-	// 收到 Device 的状态信息
-	public void onDeviceStatusResponse(BlufiClient client, int status, BlufiStatusResponse response) {
-	}
-	
-	// 收到 Device 扫描到的 Wi-Fi 信息
-	public void onDeviceScanResult(BlufiClient client, int status, List<BlufiScanResult> results) {
-	}
-	
-	// 发送自定义数据的结果
-	public void onPostCustomDataResult(BlufiClient client, int status, byte[] data) {
-	}
-	
-	// 收到 Device 的自定义信息
-	public void onReceiveCustomData(BlufiClient client, int status, byte[] data) {
-	}
+// 当扫描 Gatt 服务结束后调用该方法
+// service, writeChar, notifyChar 中有 null 的时候表示扫描失败
+public void onGattPrepared(BlufiClient client, BluetoothGatt gatt, BluetoothGattService service, BluetoothGattCharacteristic writeChar, BluetoothGattCharacteristic notifyChar) {
+}
+
+// 收到 Device 的通知数据
+// 返回 false 表示处理尚未结束，交给 BlufiClient 继续后续处理
+// 返回 true 表示处理结束，后续将不再解析该数据，也不会调用回调方法
+public boolean onGattNotification(BlufiClient client, int pkgType, int subType, byte[] data) {
+	return false;
+}
+
+// 收到 Device 发出的错误代码
+public void onError(BlufiClient client, int errCode) {
+}
+
+// 与 Device 协商加密的结果
+public void onNegotiateSecurityResult(BlufiClient client, int status) {
+}
+
+// 发送配置信息的结果
+public void onConfigureResult(BlufiClient client, int status) {
+}
+
+// 收到 Device 的版本信息
+public void onDeviceVersionResponse(BlufiClient client, int status, BlufiVersionResponse response) {
+}
+
+// 收到 Device 的状态信息
+public void onDeviceStatusResponse(BlufiClient client, int status, BlufiStatusResponse response) {
+}
+
+// 收到 Device 扫描到的 Wi-Fi 信息
+public void onDeviceScanResult(BlufiClient client, int status, List<BlufiScanResult> results) {
+}
+
+// 发送自定义数据的结果
+public void onPostCustomDataResult(BlufiClient client, int status, byte[] data) {
+}
+
+// 收到 Device 的自定义信息
+public void onReceiveCustomData(BlufiClient client, int status, byte[] data) {
+}
 ```

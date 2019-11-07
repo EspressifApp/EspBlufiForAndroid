@@ -17,4 +17,5 @@ public final class BlufiConstants {
 
     public static final int DEFAULT_MTU_LENGTH = 128;
     public static final int MIN_MTU_LENGTH = 15;
+    public static final int MAX_MTU_LENGTH = 512;
 }

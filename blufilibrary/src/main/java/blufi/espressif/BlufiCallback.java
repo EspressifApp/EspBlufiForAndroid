@@ -1,5 +1,9 @@
 package blufi.espressif;
 
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
+
 import java.util.List;
 
 import blufi.espressif.response.BlufiScanResult;
@@ -25,6 +29,19 @@ public abstract class BlufiCallback {
     public static final int CODE_CONF_ERR_POST_SOFTAP = -3003;
 
     /**
+     * Callback invoked after BluetoothGattCallback receive onServicesDiscovered
+     *
+     * @param client BlufiClient
+     * @param gatt BluetoothGatt
+     * @param service null if discover Blufi GattService failed
+     * @param writeChar null if discover Blufi write GattCharacteristic failed
+     * @param notifyChar null if discover Blufi notify GattCharacteristic failed
+     */
+    public void onGattPrepared(BlufiClient client, BluetoothGatt gatt, BluetoothGattService service,
+                               BluetoothGattCharacteristic writeChar, BluetoothGattCharacteristic notifyChar) {
+    }
+
+    /**
      * Callback invoked when receive Gatt notification
      *
      * @param client BlufiClient
@@ -35,14 +52,6 @@ public abstract class BlufiCallback {
      */
     public boolean onGattNotification(BlufiClient client, int pkgType, int subType, byte[] data) {
         return false;
-    }
-
-    /**
-     * Callback invoked when the client close the Gatt
-     *
-     * @param client BlufiClient
-     */
-    public void onGattClose(BlufiClient client) {
     }
 
     /**

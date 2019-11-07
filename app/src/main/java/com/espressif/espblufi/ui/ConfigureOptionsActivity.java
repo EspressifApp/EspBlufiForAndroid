@@ -6,7 +6,6 @@ import android.content.SharedPreferences;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -25,8 +24,12 @@ import androidx.appcompat.widget.Toolbar;
 
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BaseActivity;
+import com.espressif.espblufi.app.BlufiLog;
 import com.espressif.espblufi.constants.BlufiConstants;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -39,8 +42,6 @@ import blufi.espressif.params.BlufiParameter;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
-import tools.xxj.phiman.log.XxjLog;
-import tools.xxj.phiman.net.XxjNetUtil;
 
 public class ConfigureOptionsActivity extends BaseActivity implements AdapterView.OnItemSelectedListener {
     private static final int OP_MODE_POS_STA = 0;
@@ -62,7 +63,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
 
     private static final String PREF_AP = "blufi_conf_aps";
 
-    private XxjLog mLog = new XxjLog(getClass());
+    private BlufiLog mLog = new BlufiLog(getClass());
 
     private Spinner mDeviceModeSp;
 
@@ -139,9 +140,9 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
             }
         });
         mStationSsidET.setText(getConnectionSSID());
-        WifiInfo info = ((WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE)).getConnectionInfo();
+        WifiInfo info = mWifiManager.getConnectionInfo();
         if (info != null) {
-            byte[] ssidBytes = XxjNetUtil.getOriginalSsidBytes(info);
+            byte[] ssidBytes = getSSIDRawData(info);
             mStationSsidET.setTag(ssidBytes);
         }
 
@@ -151,6 +152,45 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
                 .subscribeOn(Schedulers.io())
                 .doOnNext(ConfigureOptionsActivity::updateWifi)
                 .subscribe();
+    }
+
+    private boolean is5GHz(int freq) {
+        return freq > 4900 && freq < 5900;
+    }
+
+    private byte[] getSSIDRawData(WifiInfo info) {
+        try {
+            Method method = info.getClass().getMethod("getWifiSsid");
+            method.setAccessible(true);
+            Object wifiSsid = method.invoke(info);
+            if (wifiSsid == null) {
+                return null;
+            }
+            method = wifiSsid.getClass().getMethod("getOctets");
+            method.setAccessible(true);
+            return (byte[]) method.invoke(wifiSsid);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException | NullPointerException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public static byte[] getSSIDRawData(ScanResult scanResult) {
+        try {
+            Field field = scanResult.getClass().getField("wifiSsid");
+            field.setAccessible(true);
+            Object wifiSsid = field.get(scanResult);
+            if (wifiSsid == null) {
+                return null;
+            }
+            Method method = wifiSsid.getClass().getMethod("getOctets");
+            method.setAccessible(true);
+            return (byte[]) method.invoke(wifiSsid);
+        } catch (NoSuchFieldException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+            e.printStackTrace();
+        }
+
+        return null;
     }
 
     private String getConnectionSSID() {
@@ -172,10 +212,6 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
     }
 
     private int getConnectionFrequncy() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            return -1;
-        }
-
         if (!mWifiManager.isWifiEnabled()) {
             return -1;
         }
@@ -214,13 +250,11 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
                     break;
             }
         } else if (parent == mSoftapSecuritSP) {
-            switch (position) {
-                case 0: // OPEN
-                    mSoftAPPasswordForm.setVisibility(View.GONE);
-                    break;
-                default:
-                    mSoftAPPasswordForm.setVisibility(View.VISIBLE);
-                    break;
+            if (position == 0) {
+                // OPEN
+                mSoftAPPasswordForm.setVisibility(View.GONE);
+            } else {
+                mSoftAPPasswordForm.setVisibility(View.VISIBLE);
             }
         }
     }
@@ -323,7 +357,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
                 .setSingleChoiceItems(wifiSSIDs, checkedItem, (dialog, which) -> {
                     mStationSsidET.setText(wifiSSIDs[which]);
                     ScanResult scanResult = mWifiList.get(which);
-                    byte[] ssidBytes = XxjNetUtil.getOriginalSsidBytes(scanResult);
+                    byte[] ssidBytes = getSSIDRawData(scanResult);
                     mStationSsidET.setTag(ssidBytes);
                     dialog.dismiss();
                 })
@@ -383,7 +417,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
                 }
             }
         }
-        if (XxjNetUtil.is5GHz(freq)) {
+        if (is5GHz(freq)) {
             mStationSsidET.setError(getString(R.string.configure_station_wifi_5g_error));
             new AlertDialog.Builder(this)
                     .setMessage(R.string.configure_station_wifi_5g_dialog_message)

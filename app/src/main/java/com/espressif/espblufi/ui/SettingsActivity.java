@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 
@@ -13,7 +12,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 import androidx.preference.EditTextPreference;
 import androidx.preference.Preference;
-import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 
 import com.espressif.espblufi.R;
@@ -29,7 +27,6 @@ import blufi.espressif.BlufiClient;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
-import tools.xxj.phiman.app.XxjAppUtils;
 
 public class SettingsActivity extends BaseActivity {
 
@@ -56,6 +53,9 @@ public class SettingsActivity extends BaseActivity {
         private Preference mVersionCheckPref;
         private volatile BlufiAppReleaseTask.ReleaseInfo mAppLatestRelease;
 
+        private long mAppVersionCode;
+        private String mAppVersionName;
+
         @Override
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             setPreferencesFromResource(R.xml.blufi_settings, rootKey);
@@ -67,19 +67,15 @@ public class SettingsActivity extends BaseActivity {
 
             mApp = BlufiApp.getInstance();
 
-            findPreference(getString(R.string.settings_version_key)).setSummary(getVersionName());
+            getVersionInfo();
+            findPreference(getString(R.string.settings_version_key)).setSummary(mAppVersionName);
             findPreference(getString(R.string.settings_blufi_version_key)).setSummary(BlufiClient.VERSION);
 
             mMtuPref = findPreference(getString(R.string.settings_mtu_length_key));
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                PreferenceCategory blufiCategory = findPreference(getString(R.string.settings_category_blufi_key));
-                blufiCategory.removePreference(mMtuPref);
-            } else {
-                int mtuLen = (int) mApp.settingsGet(KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
-                mMtuPref.setOnPreferenceChangeListener(this);
-                if (mtuLen >= BlufiConstants.MIN_MTU_LENGTH) {
-                    mMtuPref.setSummary(String.valueOf(mtuLen));
-                }
+            int mtuLen = (int) mApp.settingsGet(KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
+            mMtuPref.setOnPreferenceChangeListener(this);
+            if (mtuLen >= BlufiConstants.MIN_MTU_LENGTH && mtuLen <= BlufiConstants.MAX_MTU_LENGTH) {
+                mMtuPref.setSummary(String.valueOf(mtuLen));
             }
 
             mBlePrefixPref = findPreference(getString(R.string.settings_ble_prefix_key));
@@ -90,16 +86,16 @@ public class SettingsActivity extends BaseActivity {
             mVersionCheckPref = findPreference(getString(R.string.settings_upgrade_check_key));
         }
 
-        private String getVersionName() {
-            String version;
+        private void getVersionInfo() {
             try {
-                PackageInfo pi = getActivity().getPackageManager().getPackageInfo(getActivity().getPackageName(), 0);
-                version = pi.versionName;
+                PackageInfo pi = requireActivity().getPackageManager()
+                        .getPackageInfo(requireActivity().getPackageName(), 0);
+                mAppVersionName = pi.versionName;
+                mAppVersionCode = pi.versionCode;
             } catch (PackageManager.NameNotFoundException e) {
-                e.printStackTrace();
-                version = getString(R.string.string_unknown);
+                mAppVersionName = getString(R.string.string_unknown);
+                mAppVersionCode = -1;
             }
-            return version;
         }
 
         @Override
@@ -124,9 +120,7 @@ public class SettingsActivity extends BaseActivity {
                 int mtuLen = BlufiConstants.DEFAULT_MTU_LENGTH;
                 if (!TextUtils.isEmpty(lenStr)) {
                     int newLen = Integer.parseInt(lenStr);
-                    if (newLen > BlufiConstants.MIN_MTU_LENGTH) {
-                        mtuLen = newLen;
-                    }
+                    mtuLen = Math.min(BlufiConstants.MAX_MTU_LENGTH, Math.max(BlufiConstants.MIN_MTU_LENGTH, newLen));
                 }
                 mMtuPref.setSummary(String.valueOf(mtuLen));
                 mApp.settingsPut(KEY_MTU_LENGTH, mtuLen);
@@ -159,13 +153,12 @@ public class SettingsActivity extends BaseActivity {
                             return;
                         }
 
-                        long currentVersion = XxjAppUtils.getVersionCode(getActivity());
                         long latestVersion = latestRelease.getVersionCode();
-                        if (latestVersion > currentVersion) {
+                        if (latestVersion > mAppVersionCode) {
                             mVersionCheckPref.setSummary(R.string.settings_upgrade_check_disciver_new);
                             mAppLatestRelease = latestRelease;
 
-                            new AlertDialog.Builder(getActivity())
+                            new AlertDialog.Builder(requireActivity())
                                     .setTitle(R.string.settings_upgrade_dialog_title)
                                     .setMessage(R.string.settings_upgrade_dialog_message)
                                     .setNegativeButton(android.R.string.cancel, null)

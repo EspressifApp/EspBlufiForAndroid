@@ -5,10 +5,10 @@ android {
 
     defaultConfig {
         applicationId "com.espressif.espblufi"
-        minSdkVersion 18
+        minSdkVersion 21
         targetSdkVersion 29
-        versionCode 20
-        versionName "1.4.3"
+        versionCode 21
+        versionName "1.5.0"
     }
     buildTypes {
         release {
@@ -30,10 +30,8 @@ dependencies {
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation 'androidx.preference:preference:1.1.0'
 
-    implementation 'io.reactivex.rxjava2:rxjava:2.2.12'
+    implementation 'io.reactivex.rxjava2:rxjava:2.2.14'
     implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
-
-    implementation 'xxj.phiman:xxjtools:1.0.1'
 
     implementation project(':blufilibrary')
 }

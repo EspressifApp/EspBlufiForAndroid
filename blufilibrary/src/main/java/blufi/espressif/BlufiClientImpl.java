@@ -1,7 +1,15 @@
 package blufi.espressif;
 
+import android.annotation.TargetApi;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.BluetoothProfile;
+import android.content.Context;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
@@ -46,12 +54,16 @@ class BlufiClientImpl implements BlufiParameter {
 
     private BlufiClient mClient;
 
-    private BluetoothGatt mGatt;
-    private BluetoothGattCharacteristic mWriteCharact;
-    private final Object mWriteLock;
-    private BluetoothGattCharacteristic mNotiCharact;
+    private Context mContext;
+    private BluetoothDevice mDevice;
+    private BluetoothGattCallback mInnerGattCallback;
+    private volatile BluetoothGattCallback mUserGattCallback;
+    private volatile BlufiCallback mUserBlufiCallback;
 
-    private volatile BlufiCallback mUserCallback;
+    private BluetoothGatt mGatt;
+    private BluetoothGattCharacteristic mWriteChar;
+    private final Object mWriteLock;
+    private BluetoothGattCharacteristic mNotifyChar;
 
     private int mPackageLengthLimit;
 
@@ -59,9 +71,9 @@ class BlufiClientImpl implements BlufiParameter {
     private AtomicInteger mReadSequence;
     private LinkedBlockingQueue<Integer> mAck;
 
-    private volatile BlufiNotiyData mNotiyData;
+    private volatile BlufiNotifyData mNotifyData;
 
-    private byte[] mSecretKeyMD5;
+    private byte[] mAESKey;
 
     private boolean mEncrypted = false;
     private boolean mChecksum = false;
@@ -74,8 +86,11 @@ class BlufiClientImpl implements BlufiParameter {
     private ExecutorService mThreadPool;
     private Handler mUIHandler;
 
-    BlufiClientImpl(BlufiClient client) {
+    BlufiClientImpl(BlufiClient client, Context context, BluetoothDevice device) {
         mClient = client;
+        mContext = context;
+        mDevice = device;
+        mInnerGattCallback = new InnerGattCallback();
 
         mPackageLengthLimit = DEFAULT_PACKAGE_LENGTH;
         mSendSequence = new AtomicInteger(0);
@@ -91,37 +106,27 @@ class BlufiClientImpl implements BlufiParameter {
         mWriteLock = new Object();
     }
 
-    BlufiClientImpl(BlufiClient client, BluetoothGatt gatt, BluetoothGattCharacteristic writeCharact,
-                    BluetoothGattCharacteristic notiCharact, BlufiCallback callback) {
-        this(client);
-
-        mGatt = gatt;
-        mWriteCharact = writeCharact;
-        mNotiCharact = notiCharact;
-        mUserCallback = callback;
-    }
-
-    void setBluetoothGatt(BluetoothGatt gatt) {
-        mGatt = gatt;
-    }
-
-    BluetoothGatt getBluetoothGatt() {
-        return mGatt;
-    }
-
-    void setWriteGattCharacteristic(BluetoothGattCharacteristic characteristic) {
-        mWriteCharact = characteristic;
-    }
-
-    void setNotificationGattCharacteristic(BluetoothGattCharacteristic characteristic) {
-        mNotiCharact = characteristic;
+    void setGattCallback(BluetoothGattCallback callback) {
+        mUserGattCallback = callback;
     }
 
     void setBlufiCallback(BlufiCallback callback) {
-        mUserCallback = callback;
+        mUserBlufiCallback = callback;
     }
 
-    void close() {
+    synchronized void connect() {
+        if (mThreadPool == null) {
+            throw new IllegalStateException("The BlufiClient has closed");
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            mGatt = mDevice.connectGatt(mContext, false, mInnerGattCallback, BluetoothDevice.TRANSPORT_LE);
+        } else {
+            mGatt = mDevice.connectGatt(mContext, false, mInnerGattCallback);
+        }
+    }
+
+    synchronized void close() {
         if (mThreadPool != null) {
             mThreadPool.shutdownNow();
             mThreadPool = null;
@@ -130,14 +135,18 @@ class BlufiClientImpl implements BlufiParameter {
             mGatt.close();
             mGatt = null;
         }
-        mNotiCharact = null;
-        mWriteCharact = null;
+        mNotifyChar = null;
+        mWriteChar = null;
         if (mAck != null) {
             mAck.clear();
             mAck = null;
         }
         mClient = null;
-        mUserCallback = null;
+        mUserBlufiCallback = null;
+        mInnerGattCallback = null;
+        mUserGattCallback = null;
+        mContext = null;
+        mDevice = null;
     }
 
     void setPostPackageLengthLimit(int lengthLimit) {
@@ -210,36 +219,6 @@ class BlufiClientImpl implements BlufiParameter {
         });
     }
 
-    void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        if (characteristic != mNotiCharact) {
-            return;
-        }
-
-        if (mNotiyData == null) {
-            mNotiyData = new BlufiNotiyData();
-        }
-
-        byte[] data = characteristic.getValue();
-        // lt 0 is error, eq 0 is complete, gt 0 is continue
-        int parse = parseNotification(data, mNotiyData);
-        if (parse < 0) {
-            onError(BlufiCallback.CODE_INVALID_NOTIFICATION);
-        } else if (parse == 0) {
-            parseBlufiNotiData(mNotiyData);
-            mNotiyData = null;
-        }
-    }
-
-    void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-        if (characteristic != mWriteCharact) {
-            return;
-        }
-
-        synchronized (mWriteLock) {
-            mWriteLock.notifyAll();
-        }
-    }
-
     private void logd(String msg) {
         Log.d(TAG, msg);
     }
@@ -301,8 +280,8 @@ class BlufiClientImpl implements BlufiParameter {
 
     private synchronized void gattWrite(byte[] data) throws InterruptedException {
         synchronized (mWriteLock) {
-            mWriteCharact.setValue(data);
-            mGatt.writeCharacteristic(mWriteCharact);
+            mWriteChar.setValue(data);
+            mGatt.writeCharacteristic(mWriteChar);
 
             mWriteLock.wait();
         }
@@ -343,52 +322,43 @@ class BlufiClientImpl implements BlufiParameter {
     private boolean postContainData(boolean encrypt, boolean checksum, boolean requireAck, int type, byte[] data)
             throws InterruptedException {
         ByteArrayInputStream dataIS = new ByteArrayInputStream(data);
-
         ByteArrayOutputStream postOS = new ByteArrayOutputStream();
-
-        for (int b = dataIS.read(); b != -1; b = dataIS.read()) {
-            postOS.write(b);
-            int postDataLengthLimit = mPackageLengthLimit - PACKAGE_HEADER_LENGTH;
-            if (checksum) {
-                postDataLengthLimit -= 1;
-            }
-            if (postOS.size() >= postDataLengthLimit) {
-                boolean frag = dataIS.available() > 0;
-                if (frag) {
-                    int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, true);
-                    int sequence = generateSendSequence();
-                    int totleLen = postOS.size() + dataIS.available();
-                    byte totleLen1 = (byte) (totleLen & 0xff);
-                    byte totleLen2 = (byte) ((totleLen >> 8) & 0xff);
-                    byte[] tempData = postOS.toByteArray();
-                    postOS.reset();
-                    postOS.write(totleLen1);
-                    postOS.write(totleLen2);
-                    postOS.write(tempData, 0, tempData.length);
-                    int posDatatLen = postOS.size();
-
-                    byte[] postBytes = getPostBytes(type, frameCtrl, sequence, posDatatLen, postOS.toByteArray());
-                    gattWrite(postBytes);
-                    postOS.reset();
-                    if (requireAck && !receiveAck(sequence)) {
-                        return false;
-                    }
-
-                    sleep(10L);
-                }
-            }
+        int postDataLengthLimit = mPackageLengthLimit - PACKAGE_HEADER_LENGTH;
+        if (checksum) {
+            postDataLengthLimit -= 1;
         }
+        byte[] dateBuf = new byte[postDataLengthLimit];
+        while (true) {
+            int read = dataIS.read(dateBuf, 0, dateBuf.length);
+            if (read == -1) {
+                break;
+            }
 
-        if (postOS.size() > 0) {
-            int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, false);
+            postOS.write(dateBuf, 0, read);
+            boolean frag = dataIS.available() > 0;
+            int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, frag);
             int sequence = generateSendSequence();
-            int postDataLen = postOS.size();
-
-            byte[] postBytes = getPostBytes(type, frameCtrl, sequence, postDataLen, postOS.toByteArray());
-            gattWrite(postBytes);
+            if (frag) {
+                int totalLen = postOS.size() + dataIS.available();
+                byte totalLen1 = (byte) (totalLen & 0xff);
+                byte totalLen2 = (byte) ((totalLen >> 8) & 0xff);
+                byte[] tempData = postOS.toByteArray();
+                postOS.reset();
+                postOS.write(totalLen1);
+                postOS.write(totalLen2);
+                postOS.write(tempData, 0, tempData.length);
+            }
+            byte[] postBytes = getPostBytes(type, frameCtrl, sequence, postOS.size(), postOS.toByteArray());
             postOS.reset();
-
-            return !requireAck || receiveAck(sequence);
+            gattWrite(postBytes);
+            if (frag) {
+                if (requireAck && !receiveAck(sequence)) {
+                    return false;
+                }
+                sleep(10L);
+            } else {
+                return !requireAck || receiveAck(sequence);
+            }
         }
 
         return true;
@@ -418,8 +388,8 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         if (frameCtrlData.isEncrypted() && data != null) {
-            BlufiAES espAES = new BlufiAES(mSecretKeyMD5, AES_TRANSFORMATION, generateAESIV(sequence));
-            data = espAES.encrypt(data);
+            BlufiAES aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+            data = aes.encrypt(data);
         }
         if (data != null) {
             byteOS.write(data, 0, data.length);
@@ -433,7 +403,7 @@ class BlufiClientImpl implements BlufiParameter {
         return byteOS.toByteArray();
     }
 
-    private int parseNotification(byte[] response, BlufiNotiyData notification) {
+    private int parseNotification(byte[] response, BlufiNotifyData notification) {
         if (response == null) {
             logw("parseNotification null data");
             return -1;
@@ -472,8 +442,8 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         if (frameCtrlData.isEncrypted()) {
-            BlufiAES espAES = new BlufiAES(mSecretKeyMD5, AES_TRANSFORMATION, generateAESIV(sequence));
-            dataBytes = espAES.decrypt(dataBytes);
+            BlufiAES aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+            dataBytes = aes.decrypt(dataBytes);
         }
 
         if (frameCtrlData.isChecksum()) {
@@ -508,11 +478,11 @@ class BlufiClientImpl implements BlufiParameter {
         return frameCtrlData.hasFrag() ? 1 : 0;
     }
 
-    private void parseBlufiNotiData(BlufiNotiyData data) {
+    private void parseBlufiNotifyData(BlufiNotifyData data) {
         int pkgType = data.getPkgType();
         int subType = data.getSubType();
-        if (mUserCallback != null) {
-            boolean complete = mUserCallback.onGattNotification(mClient, pkgType, subType, data.getDataArray());
+        if (mUserBlufiCallback != null) {
+            boolean complete = mUserBlufiCallback.onGattNotification(mClient, pkgType, subType, data.getDataArray());
             if (complete) {
                 return;
             }
@@ -723,8 +693,8 @@ class BlufiClientImpl implements BlufiParameter {
 
     private void onError(final int errCode) {
         mUIHandler.post(() -> {
-            if (mUserCallback != null) {
-                mUserCallback.onError(mClient, errCode);
+            if (mUserBlufiCallback != null) {
+                mUserBlufiCallback.onError(mClient, errCode);
             }
         });
     }
@@ -757,7 +727,7 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             }
 
-            mSecretKeyMD5 = BlufiMD5.getMD5Bytes(espDH.getSecretKey());
+            mAESKey = BlufiMD5.getMD5Bytes(espDH.getSecretKey());
         } catch (Exception e) {
             e.printStackTrace();
             onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
@@ -782,8 +752,8 @@ class BlufiClientImpl implements BlufiParameter {
 
     private void onNegotiateSecurityResult(final int status) {
         mUIHandler.post(() -> {
-            if (mUserCallback != null) {
-                mUserCallback.onNegotiateSecurityResult(mClient, status);
+            if (mUserBlufiCallback != null) {
+                mUserBlufiCallback.onNegotiateSecurityResult(mClient, status);
             }
         });
     }
@@ -983,8 +953,8 @@ class BlufiClientImpl implements BlufiParameter {
 
     private void onConfigureResult(final int status) {
         mUIHandler.post(() -> {
-            if (mUserCallback != null) {
-                mUserCallback.onConfigureResult(mClient, status);
+            if (mUserBlufiCallback != null) {
+                mUserBlufiCallback.onConfigureResult(mClient, status);
             }
         });
     }
@@ -1092,8 +1062,8 @@ class BlufiClientImpl implements BlufiParameter {
 
     private void onVersionResponse(final int status, final BlufiVersionResponse response) {
         mUIHandler.post(() -> {
-            if (mUserCallback != null) {
-                mUserCallback.onDeviceVersionResponse(mClient, status, response);
+            if (mUserBlufiCallback != null) {
+                mUserBlufiCallback.onDeviceVersionResponse(mClient, status, response);
             }
         });
     }
@@ -1116,8 +1086,8 @@ class BlufiClientImpl implements BlufiParameter {
 
     private void onStatusResponse(final int status, final BlufiStatusResponse response) {
         mUIHandler.post(() -> {
-            if (mUserCallback != null) {
-                mUserCallback.onDeviceStatusResponse(mClient, status, response);
+            if (mUserBlufiCallback != null) {
+                mUserBlufiCallback.onDeviceStatusResponse(mClient, status, response);
             }
         });
     }
@@ -1140,8 +1110,8 @@ class BlufiClientImpl implements BlufiParameter {
 
     private void onDeviceScanResult(final int status, final List<BlufiScanResult> results) {
         mUIHandler.post(() -> {
-            if (mUserCallback != null) {
-                mUserCallback.onDeviceScanResult(mClient, status, results);
+            if (mUserBlufiCallback != null) {
+                mUserBlufiCallback.onDeviceScanResult(mClient, status, results);
             }
         });
     }
@@ -1160,16 +1130,16 @@ class BlufiClientImpl implements BlufiParameter {
 
     private void onPostCustomDataResult(final int status, final byte[] data) {
         mUIHandler.post(() -> {
-            if (mUserCallback != null) {
-                mUserCallback.onPostCustomDataResult(mClient, status, data);
+            if (mUserBlufiCallback != null) {
+                mUserBlufiCallback.onPostCustomDataResult(mClient, status, data);
             }
         });
     }
 
     private void onReceiveCustomData(final int status, final byte[] data) {
         mUIHandler.post(() -> {
-            if (mUserCallback != null) {
-                mUserCallback.onReceiveCustomData(mClient, status, data);
+            if (mUserBlufiCallback != null) {
+                mUserBlufiCallback.onReceiveCustomData(mClient, status, data);
             }
         });
     }
@@ -1207,6 +1177,147 @@ class BlufiClientImpl implements BlufiParameter {
         } catch (InterruptedException e) {
             e.printStackTrace();
             Thread.currentThread().interrupt();
+        }
+    }
+
+    private class InnerGattCallback extends BluetoothGattCallback {
+
+        public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                if (newState == BluetoothProfile.STATE_CONNECTED) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        gatt.requestConnectionPriority(BluetoothGatt.CONNECTION_PRIORITY_HIGH);
+                    }
+
+                    gatt.discoverServices();
+                }
+            }
+
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onConnectionStateChange(gatt, status, newState);
+            }
+        }
+
+        public void onServicesDiscovered(BluetoothGatt gatt, int status) {
+            BluetoothGattService service = null;
+            BluetoothGattCharacteristic writeChar = null;
+            BluetoothGattCharacteristic notifyChar = null;
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                service = gatt.getService(BlufiParameter.UUID_SERVICE);
+                if (service != null) {
+                    writeChar = service.getCharacteristic(BlufiParameter.UUID_WRITE_CHARACTERISTIC);
+                    notifyChar = service.getCharacteristic(BlufiParameter.UUID_NOTIFICATION_CHARACTERISTIC);
+                    if (notifyChar != null) {
+                        gatt.setCharacteristicNotification(notifyChar, true);
+                    }
+                }
+
+                mWriteChar = writeChar;
+                mNotifyChar = notifyChar;
+            }
+
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onServicesDiscovered(gatt, status);
+            }
+            if (mUserBlufiCallback != null) {
+                final BluetoothGattService cbService = service;
+                final BluetoothGattCharacteristic cbWriteChar = writeChar;
+                final BluetoothGattCharacteristic cbNotifyChar = notifyChar;
+                mUIHandler.post(() -> {
+                    if (mUserBlufiCallback != null) {
+                        mUserBlufiCallback.onGattPrepared(mClient, gatt, cbService, cbWriteChar, cbNotifyChar);
+                    }
+                });
+            }
+        }
+
+        public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
+            if (characteristic != mNotifyChar) {
+                return;
+            }
+
+            if (mNotifyData == null) {
+                mNotifyData = new BlufiNotifyData();
+            }
+
+            byte[] data = characteristic.getValue();
+            // lt 0 is error, eq 0 is complete, gt 0 is continue
+            int parse = parseNotification(data, mNotifyData);
+            if (parse < 0) {
+                onError(BlufiCallback.CODE_INVALID_NOTIFICATION);
+            } else if (parse == 0) {
+                parseBlufiNotifyData(mNotifyData);
+                mNotifyData = null;
+            }
+
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onCharacteristicChanged(gatt, characteristic);
+            }
+        }
+
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            if (characteristic != mWriteChar) {
+                return;
+            }
+
+            synchronized (mWriteLock) {
+                mWriteLock.notifyAll();
+            }
+
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onCharacteristicWrite(gatt, characteristic, status);
+            }
+        }
+
+        public void onCharacteristicRead(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onCharacteristicRead(gatt, characteristic, status);
+            }
+        }
+
+        public void onDescriptorRead(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onDescriptorRead(gatt, descriptor, status);
+            }
+        }
+
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onDescriptorWrite(gatt, descriptor, status);
+            }
+        }
+
+        public void onReliableWriteCompleted(BluetoothGatt gatt, int status) {
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onReliableWriteCompleted(gatt, status);
+            }
+        }
+
+        public void onReadRemoteRssi(BluetoothGatt gatt, int rssi, int status) {
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onReadRemoteRssi(gatt, rssi, status);
+            }
+        }
+
+        @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+        public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onMtuChanged(gatt, mtu, status);
+            }
+        }
+
+        @TargetApi(Build.VERSION_CODES.O)
+        public void onPhyUpdate(BluetoothGatt gatt, int txPhy, int rxPhy, int status) {
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onPhyUpdate(gatt, txPhy, rxPhy, status);
+            }
+        }
+
+        @TargetApi(Build.VERSION_CODES.O)
+        public void onPhyRead(BluetoothGatt gatt, int txPhy, int rxPhy, int status) {
+            if (mUserGattCallback != null) {
+                mUserGattCallback.onPhyRead(gatt, txPhy, rxPhy, status);
+            }
         }
     }
 }
