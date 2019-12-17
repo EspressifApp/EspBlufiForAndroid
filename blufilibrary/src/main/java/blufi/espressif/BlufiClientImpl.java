@@ -279,6 +279,7 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private synchronized void gattWrite(byte[] data) throws InterruptedException {
+        Log.i(TAG, "gattWrite: LimitLength = " + mPackageLengthLimit + ", post data length = " + data.length);
         synchronized (mWriteLock) {
             mWriteChar.setValue(data);
             mGatt.writeCharacteristic(mWriteChar);
@@ -1301,6 +1302,7 @@ class BlufiClientImpl implements BlufiParameter {
 
         @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+            Log.i(TAG, "onMtuChanged: mtu=" + mtu + ", status=" + status);
             if (mUserGattCallback != null) {
                 mUserGattCallback.onMtuChanged(gatt, mtu, status);
             }

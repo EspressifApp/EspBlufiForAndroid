@@ -26,6 +26,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BaseActivity;
 import com.espressif.espblufi.app.BlufiApp;
+import com.espressif.espblufi.app.BlufiLog;
 import com.espressif.espblufi.constants.BlufiConstants;
 import com.espressif.espblufi.constants.SettingsConstants;
 
@@ -39,7 +40,6 @@ import blufi.espressif.params.BlufiConfigureParams;
 import blufi.espressif.response.BlufiScanResult;
 import blufi.espressif.response.BlufiStatusResponse;
 import blufi.espressif.response.BlufiVersionResponse;
-import com.espressif.espblufi.app.BlufiLog;
 
 public class BlufiActivity extends BaseActivity {
     private static final int REQUEST_CONFIGURE = 0x20;
@@ -334,7 +334,7 @@ public class BlufiActivity extends BaseActivity {
                 updateMessage(String.format(Locale.ENGLISH, "Set mtu complete, mtu=%d ", mtu), false);
 
                 if (mtu > 0 && mBlufiClient != null) {
-                    int blufiPkgLenLimit = mtu - 3;
+                    int blufiPkgLenLimit = mtu - 5;
                     mLog.d("BluFiClient setPostPackageLengthLimit " + blufiPkgLenLimit);
                     mBlufiClient.setPostPackageLengthLimit(blufiPkgLenLimit);
                 }
