@@ -19,6 +19,11 @@ public class BlufiClient {
         mImpl = new BlufiClientImpl(this, context, device);
     }
 
+    /**
+     * Set BluetoothGattCallback
+     *
+     * @param callback the BluetoothGattCallback
+     */
     public void setGattCallback(BluetoothGattCallback callback) {
         mImpl.setGattCallback(callback);
     }
@@ -32,6 +37,9 @@ public class BlufiClient {
         mImpl.setBlufiCallback(callback);
     }
 
+    /**
+     * Establish a BLE connection with BluetoothDevice
+     */
     public void connect() {
         mImpl.connect();
     }

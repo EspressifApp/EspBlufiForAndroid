@@ -332,12 +332,6 @@ public class BlufiActivity extends BaseActivity {
             mLog.d(String.format(Locale.ENGLISH, "onMtuChanged status=%d, mtu=%d", status, mtu));
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 updateMessage(String.format(Locale.ENGLISH, "Set mtu complete, mtu=%d ", mtu), false);
-
-                if (mtu > 0 && mBlufiClient != null) {
-                    int blufiPkgLenLimit = mtu - 5;
-                    mLog.d("BluFiClient setPostPackageLengthLimit " + blufiPkgLenLimit);
-                    mBlufiClient.setPostPackageLengthLimit(blufiPkgLenLimit);
-                }
             } else {
                 updateMessage(String.format(Locale.ENGLISH, "Set mtu failed, mtu=%d, status=%d", mtu, status), false);
             }
