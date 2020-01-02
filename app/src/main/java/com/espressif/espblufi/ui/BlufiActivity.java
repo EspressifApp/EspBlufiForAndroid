@@ -394,13 +394,10 @@ public class BlufiActivity extends BaseActivity {
 
         @Override
         public void onNegotiateSecurityResult(BlufiClient client, int status) {
-            switch (status) {
-                case STATUS_SUCCESS:
-                    updateMessage("Negotiate security complete", false);
-                    break;
-                default:
-                    updateMessage("Negotiate security failed， code=" + status, false);
-                    break;
+            if (status == STATUS_SUCCESS) {
+                updateMessage("Negotiate security complete", false);
+            } else {
+                updateMessage("Negotiate security failed， code=" + status, false);
             }
 
             mBlufiSecurityBtn.setEnabled(mConnected);
@@ -408,13 +405,10 @@ public class BlufiActivity extends BaseActivity {
 
         @Override
         public void onConfigureResult(BlufiClient client, int status) {
-            switch (status) {
-                case STATUS_SUCCESS:
-                    updateMessage("Post configure params complete", false);
-                    break;
-                default:
-                    updateMessage("Post configure params failed, code=" + status, false);
-                    break;
+            if (status == STATUS_SUCCESS) {
+                updateMessage("Post configure params complete", false);
+            } else {
+                updateMessage("Post configure params failed, code=" + status, false);
             }
 
             mBlufiConfigureBtn.setEnabled(mConnected);
@@ -422,14 +416,11 @@ public class BlufiActivity extends BaseActivity {
 
         @Override
         public void onDeviceStatusResponse(BlufiClient client, int status, BlufiStatusResponse response) {
-            switch (status) {
-                case STATUS_SUCCESS:
-                    updateMessage(String.format("Receive device status response:\n%s", response.generateValidInfo()),
-                            true);
-                    break;
-                default:
-                    updateMessage("Device status response error, code=" + status, false);
-                    break;
+            if (status == STATUS_SUCCESS) {
+                updateMessage(String.format("Receive device status response:\n%s", response.generateValidInfo()),
+                        true);
+            } else {
+                updateMessage("Device status response error, code=" + status, false);
             }
 
             mBlufiDeviceStatusBtn.setEnabled(mConnected);
@@ -437,18 +428,15 @@ public class BlufiActivity extends BaseActivity {
 
         @Override
         public void onDeviceScanResult(BlufiClient client, int status, List<BlufiScanResult> results) {
-            switch (status) {
-                case STATUS_SUCCESS:
-                    StringBuilder msg = new StringBuilder();
-                    msg.append("Receive device scan result:\n");
-                    for (BlufiScanResult scanResult : results) {
-                        msg.append(scanResult.toString()).append("\n");
-                    }
-                    updateMessage(msg.toString(), true);
-                    break;
-                default:
-                    updateMessage("Device scan result error, code=" + status, false);
-                    break;
+            if (status == STATUS_SUCCESS) {
+                StringBuilder msg = new StringBuilder();
+                msg.append("Receive device scan result:\n");
+                for (BlufiScanResult scanResult : results) {
+                    msg.append(scanResult.toString()).append("\n");
+                }
+                updateMessage(msg.toString(), true);
+            } else {
+                updateMessage("Device scan result error, code=" + status, false);
             }
 
             mBlufiDeviceScanBtn.setEnabled(mConnected);
@@ -456,14 +444,11 @@ public class BlufiActivity extends BaseActivity {
 
         @Override
         public void onDeviceVersionResponse(BlufiClient client, int status, BlufiVersionResponse response) {
-            switch (status) {
-                case STATUS_SUCCESS:
-                    updateMessage(String.format("Receive device version: %s", response.getVersionString()),
-                            true);
-                    break;
-                default:
-                    updateMessage("Device version error, code=" + status, false);
-                    break;
+            if (status == STATUS_SUCCESS) {
+                updateMessage(String.format("Receive device version: %s", response.getVersionString()),
+                        true);
+            } else {
+                updateMessage("Device version error, code=" + status, false);
             }
 
             mBlufiVersionBtn.setEnabled(mConnected);
@@ -473,26 +458,20 @@ public class BlufiActivity extends BaseActivity {
         public void onPostCustomDataResult(BlufiClient client, int status, byte[] data) {
             String dataStr = new String(data);
             String format = "Post data %s %s";
-            switch (status) {
-                case STATUS_SUCCESS:
-                    updateMessage(String.format(format, dataStr, "complete"), false);
-                    break;
-                default:
-                    updateMessage(String.format(format, dataStr, "failed"), false);
-                    break;
+            if (status == STATUS_SUCCESS) {
+                updateMessage(String.format(format, dataStr, "complete"), false);
+            } else {
+                updateMessage(String.format(format, dataStr, "failed"), false);
             }
         }
 
         @Override
         public void onReceiveCustomData(BlufiClient client, int status, byte[] data) {
-            switch (status) {
-                case STATUS_SUCCESS:
-                    String customStr = new String(data);
-                    updateMessage(String.format("Receive custom data:\n%s", customStr), true);
-                    break;
-                default:
-                    updateMessage("Receive custom data error, code=" + status, false);
-                    break;
+            if (status == STATUS_SUCCESS) {
+                String customStr = new String(data);
+                updateMessage(String.format("Receive custom data:\n%s", customStr), true);
+            } else {
+                updateMessage("Receive custom data error, code=" + status, false);
             }
         }
 

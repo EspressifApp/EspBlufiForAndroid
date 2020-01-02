@@ -33,6 +33,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BlufiApp;
+import com.espressif.espblufi.app.BlufiLog;
 import com.espressif.espblufi.constants.BlufiConstants;
 import com.espressif.espblufi.constants.SettingsConstants;
 
@@ -45,8 +46,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import com.espressif.espblufi.app.BlufiLog;
 
 public class MainActivity extends AppCompatActivity {
     private static final long TIMEOUT_SCAN = 4000L;
@@ -118,7 +117,6 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
-
     }
 
     @Override
