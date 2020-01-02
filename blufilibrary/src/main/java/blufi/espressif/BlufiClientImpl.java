@@ -41,7 +41,7 @@ import blufi.espressif.security.BlufiMD5;
 class BlufiClientImpl implements BlufiParameter {
     private static final String TAG = "BlufiClientImpl";
 
-    private static final int DEFAULT_PACKAGE_LENGTH = 20;
+    private static final int DEFAULT_PACKAGE_LENGTH = 18;
     private static final int PACKAGE_HEADER_LENGTH = 4;
     private static final int MIN_PACKAGE_LENGTH = 7;
 
