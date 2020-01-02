@@ -2,6 +2,9 @@
 
 # Update Log
 
+## v1.5.1
+- Fix BluFi packet length
+
 ## v1.5.0
 - Update BlufiClient APIs
 - Update development [doc](../doc)

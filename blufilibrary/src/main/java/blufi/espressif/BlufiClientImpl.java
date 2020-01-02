@@ -274,7 +274,6 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private synchronized void gattWrite(byte[] data) throws InterruptedException {
-        Log.i(TAG, "gattWrite() data length " + data.length);
         synchronized (mWriteLock) {
             mWriteChar.setValue(data);
             mGatt.writeCharacteristic(mWriteChar);
