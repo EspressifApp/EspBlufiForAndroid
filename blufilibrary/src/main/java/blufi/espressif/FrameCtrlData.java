@@ -2,7 +2,7 @@ package blufi.espressif;
 
 import blufi.espressif.params.BlufiParameter;
 
-public class FrameCtrlData {
+class FrameCtrlData {
     private static final int FRAME_CTRL_POSITION_ENCRYPTED = 0;
     private static final int FRAME_CTRL_POSITION_CHECKSUM = 1;
     private static final int FRAME_CTRL_POSITION_DATA_DIRECTION = 2;
@@ -11,7 +11,7 @@ public class FrameCtrlData {
 
     private int mValue;
 
-    public FrameCtrlData(int frameCtrlValue) {
+    FrameCtrlData(int frameCtrlValue) {
         mValue = frameCtrlValue;
     }
 
@@ -19,23 +19,23 @@ public class FrameCtrlData {
         return ((mValue >> position) & 1) == 1;
     }
 
-    public boolean isEncrypted() {
+    boolean isEncrypted() {
         return check(FRAME_CTRL_POSITION_ENCRYPTED);
     }
 
-    public boolean isChecksum() {
+    boolean isChecksum() {
         return check(FRAME_CTRL_POSITION_CHECKSUM);
     }
 
-    public boolean requireAck() {
+    boolean requireAck() {
         return check(FRAME_CTRL_POSITION_REQUIRE_ACK);
     }
 
-    public boolean hasFrag() {
+    boolean hasFrag() {
         return check(FRAME_CTRL_POSITION_FRAG);
     }
 
-    public static int getFrameCTRLValue(boolean encrypted, boolean checksum, int direction, boolean requireAck, boolean frag) {
+    static int getFrameCTRLValue(boolean encrypted, boolean checksum, int direction, boolean requireAck, boolean frag) {
         int frame = 0;
         if (encrypted) {
             frame = frame | (1 << FRAME_CTRL_POSITION_ENCRYPTED);

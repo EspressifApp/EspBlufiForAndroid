@@ -8,10 +8,12 @@ import android.os.Bundle;
 import android.text.TextUtils;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
 import androidx.preference.EditTextPreference;
 import androidx.preference.Preference;
+import androidx.preference.PreferenceCategory;
 import androidx.preference.PreferenceFragmentCompat;
 
 import com.espressif.espblufi.R;
@@ -68,22 +70,28 @@ public class SettingsActivity extends BaseActivity {
             mApp = BlufiApp.getInstance();
 
             getVersionInfo();
-            findPreference(getString(R.string.settings_version_key)).setSummary(mAppVersionName);
-            findPreference(getString(R.string.settings_blufi_version_key)).setSummary(BlufiClient.VERSION);
+            findPreference(R.string.settings_version_key).setSummary(mAppVersionName);
+            findPreference(R.string.settings_blufi_version_key).setSummary(BlufiClient.VERSION);
 
-            mMtuPref = findPreference(getString(R.string.settings_mtu_length_key));
+            mMtuPref = findPreference(R.string.settings_mtu_length_key);
             int mtuLen = (int) mApp.settingsGet(KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
             mMtuPref.setOnPreferenceChangeListener(this);
             if (mtuLen >= BlufiConstants.MIN_MTU_LENGTH && mtuLen <= BlufiConstants.MAX_MTU_LENGTH) {
                 mMtuPref.setSummary(String.valueOf(mtuLen));
             }
+            PreferenceCategory blufiCategory = findPreference(R.string.settings_category_blufi_key);
+            blufiCategory.removePreference(mMtuPref);
 
-            mBlePrefixPref = findPreference(getString(R.string.settings_ble_prefix_key));
+            mBlePrefixPref = findPreference(R.string.settings_ble_prefix_key);
             mBlePrefixPref.setOnPreferenceChangeListener(this);
             String blePrefix = (String) mApp.settingsGet(KEY_BLE_PREFIX, BlufiConstants.BLUFI_PREFIX);
             mBlePrefixPref.setSummary(blePrefix);
 
-            mVersionCheckPref = findPreference(getString(R.string.settings_upgrade_check_key));
+            mVersionCheckPref = findPreference(R.string.settings_upgrade_check_key);
+        }
+
+        public <T extends Preference> T findPreference(@StringRes int res) {
+            return findPreference(getString(res));
         }
 
         private void getVersionInfo() {

@@ -2,7 +2,7 @@ package blufi.espressif;
 
 import java.io.ByteArrayOutputStream;
 
-public class BlufiNotifyData {
+class BlufiNotifyData {
     private int mTypeValue;
     private int mPkgType;
     private int mSubType;
@@ -11,55 +11,55 @@ public class BlufiNotifyData {
 
     private ByteArrayOutputStream mDataOS;
 
-    public BlufiNotifyData() {
+    BlufiNotifyData() {
         mDataOS = new ByteArrayOutputStream();
     }
 
-    public int getType() {
+    int getType() {
         return mTypeValue;
     }
 
-    public void setType(int typeValue) {
+    void setType(int typeValue) {
         mTypeValue = typeValue;
     }
 
-    public int getPkgType() {
+    int getPkgType() {
         return mPkgType;
     }
 
-    public void setPkgType(int pkgType) {
+    void setPkgType(int pkgType) {
         mPkgType = pkgType;
     }
 
-    public int getSubType() {
+    int getSubType() {
         return mSubType;
     }
 
-    public void setSubType(int subType) {
+    void setSubType(int subType) {
         mSubType = subType;
     }
 
-    public int getFrameCtrl() {
+    int getFrameCtrl() {
         return mFrameCtrlValue;
     }
 
-    public void setFrameCtrl(int frameCtrl) {
+    void setFrameCtrl(int frameCtrl) {
         mFrameCtrlValue = frameCtrl;
     }
 
-    public void addData(byte b) {
+    void addData(byte b) {
         mDataOS.write(b);
     }
 
-    public void addData(byte[] bytes) {
+    void addData(byte[] bytes) {
         mDataOS.write(bytes, 0, bytes.length);
     }
 
-    public byte[] getDataArray() {
+    byte[] getDataArray() {
         return mDataOS.toByteArray();
     }
 
-    public void clear() {
+    void clear() {
         mTypeValue = 0;
         mPkgType = 0;
         mSubType = 0;

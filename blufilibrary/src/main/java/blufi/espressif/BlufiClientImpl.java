@@ -25,6 +25,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import javax.crypto.interfaces.DHPublicKey;
 
@@ -41,7 +43,7 @@ import blufi.espressif.security.BlufiMD5;
 class BlufiClientImpl implements BlufiParameter {
     private static final String TAG = "BlufiClientImpl";
 
-    private static final int DEFAULT_PACKAGE_LENGTH = 18;
+    private static final int DEFAULT_PACKAGE_LENGTH = 20;
     private static final int PACKAGE_HEADER_LENGTH = 4;
     private static final int MIN_PACKAGE_LENGTH = 7;
 
@@ -62,7 +64,7 @@ class BlufiClientImpl implements BlufiParameter {
 
     private BluetoothGatt mGatt;
     private BluetoothGattCharacteristic mWriteChar;
-    private final Object mWriteLock;
+    private final Lock mWriteLock;
     private BluetoothGattCharacteristic mNotifyChar;
 
     private int mPackageLengthLimit = -1;
@@ -87,6 +89,8 @@ class BlufiClientImpl implements BlufiParameter {
     private ExecutorService mThreadPool;
     private Handler mUIHandler;
 
+    private int mConnectState = BluetoothGatt.STATE_DISCONNECTED;
+
     BlufiClientImpl(BlufiClient client, Context context, BluetoothDevice device) {
         mClient = client;
         mContext = context;
@@ -103,7 +107,7 @@ class BlufiClientImpl implements BlufiParameter {
         mThreadPool = Executors.newSingleThreadExecutor();
         mUIHandler = new Handler(Looper.getMainLooper());
 
-        mWriteLock = new Object();
+        mWriteLock = new ReentrantLock(true);
     }
 
     void setGattCallback(BluetoothGattCallback callback) {
@@ -127,6 +131,10 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     synchronized void close() {
+        mConnectState = BluetoothGatt.STATE_DISCONNECTED;
+        synchronized (mWriteLock) {
+            mWriteLock.notifyAll();
+        }
         if (mThreadPool != null) {
             mThreadPool.shutdownNow();
             mThreadPool = null;
@@ -273,12 +281,23 @@ class BlufiClientImpl implements BlufiParameter {
         return result;
     }
 
-    private synchronized void gattWrite(byte[] data) throws InterruptedException {
-        synchronized (mWriteLock) {
-            mWriteChar.setValue(data);
-            mGatt.writeCharacteristic(mWriteChar);
+    private boolean isConnected() {
+        return mConnectState == BluetoothGatt.STATE_CONNECTED;
+    }
 
-            mWriteLock.wait();
+    private void gattWrite(byte[] data) throws InterruptedException {
+        mWriteLock.lock();
+        try {
+            if (!isConnected()) {
+                return;
+            }
+            synchronized (mWriteLock) {
+                mWriteChar.setValue(data);
+                mGatt.writeCharacteristic(mWriteChar);
+                mWriteLock.wait();
+            }
+        } finally {
+            mWriteLock.unlock();
         }
     }
 
@@ -287,7 +306,7 @@ class BlufiClientImpl implements BlufiParameter {
             int ack = mAck.take();
             return ack == sequence;
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "receiveAck: interrupted");
             Thread.currentThread().interrupt();
             return false;
         }
@@ -321,6 +340,7 @@ class BlufiClientImpl implements BlufiParameter {
         int pkgLengthLimit = mPackageLengthLimit > 0 ? mPackageLengthLimit :
                 (mBlufiMTU > 0 ? mBlufiMTU : DEFAULT_PACKAGE_LENGTH);
         int postDataLengthLimit = pkgLengthLimit - PACKAGE_HEADER_LENGTH;
+        postDataLengthLimit -= 2; // if flag, two bytes total length in data
         if (checksum) {
             postDataLengthLimit -= 2;
         }
@@ -332,17 +352,19 @@ class BlufiClientImpl implements BlufiParameter {
             }
 
             postOS.write(dateBuf, 0, read);
+            if (dataIS.available() == 2) {
+                postOS.write(dataIS.read());
+                postOS.write(dataIS.read());
+            }
             boolean frag = dataIS.available() > 0;
             int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, frag);
             int sequence = generateSendSequence();
             if (frag) {
                 int totalLen = postOS.size() + dataIS.available();
-                byte totalLen1 = (byte) (totalLen & 0xff);
-                byte totalLen2 = (byte) ((totalLen >> 8) & 0xff);
                 byte[] tempData = postOS.toByteArray();
                 postOS.reset();
-                postOS.write(totalLen1);
-                postOS.write(totalLen2);
+                postOS.write(totalLen & 0xff);
+                postOS.write(totalLen >> 8 & 0xff);
                 postOS.write(tempData, 0, tempData.length);
             }
             byte[] postBytes = getPostBytes(type, frameCtrl, sequence, postOS.size(), postOS.toByteArray());
@@ -463,7 +485,7 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         if (frameCtrlData.hasFrag()) {
-//            int totleLen = dataBytes[0] | (dataBytes[1] << 8);
+//            int totalLen = dataBytes[0] | (dataBytes[1] << 8);
             dataOffset = 2;
         } else {
             dataOffset = 0;
@@ -663,7 +685,7 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "Take device public key interrupted");
             Thread.currentThread().interrupt();
             return;
         }
@@ -682,18 +704,20 @@ class BlufiClientImpl implements BlufiParameter {
             return;
         }
 
-        mEncrypted = true;
-        mChecksum = true;
         boolean setSecurity = false;
         try {
-            setSecurity = postSetSecurity(false, false, mEncrypted, mChecksum);
+            setSecurity = postSetSecurity(false, false, true, true);
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         if (setSecurity) {
+            mEncrypted = true;
+            mChecksum = true;
             onNegotiateSecurityResult(BlufiCallback.STATUS_SUCCESS);
         } else {
+            mEncrypted = false;
+            mChecksum = false;
             onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SET_SECURITY);
         }
     }
@@ -742,7 +766,7 @@ class BlufiClientImpl implements BlufiParameter {
                 return null;
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "postNegotiateSecurity: pgk length interrupted");
             Thread.currentThread().interrupt();
             return null;
         }
@@ -779,7 +803,7 @@ class BlufiClientImpl implements BlufiParameter {
                 return null;
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "postNegotiateSecurity: PGK interrupted");
             Thread.currentThread().interrupt();
             return null;
         }
@@ -806,16 +830,16 @@ class BlufiClientImpl implements BlufiParameter {
         int type = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_SET_SEC_MODE);
         int data = 0;
         if (dataChecksum) {
-            data = data | 1;
+            data |= 1;
         }
         if (dataEncrypted) {
-            data = data | (1 << 1);
+            data |= 0b10;
         }
         if (ctrlChecksum) {
-            data = data | (1 << 4);
+            data |= 0b10000;
         }
         if (ctrlEncrypted) {
-            data = data | (1 << 5);
+            data |= 0b100000;
         }
 
         byte[] postData = {(byte) data};
@@ -823,7 +847,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             return post(false, true, mRequireAck, type, postData);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "postSetSecurity interrupted");
             Thread.currentThread().interrupt();
             return false;
         }
@@ -836,7 +860,7 @@ class BlufiClientImpl implements BlufiParameter {
                 BigInteger devicePublicValue = new BigInteger(keyStr, 16);
                 mDevicePublicKeyQueue.add(devicePublicValue);
             } catch (NumberFormatException e) {
-                e.printStackTrace();
+                Log.w(TAG, "onReceiveDevicePublicKey: NumberFormatException -> " + keyStr);
                 mDevicePublicKeyQueue.add(new BigInteger("0"));
             }
         }
@@ -914,7 +938,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             return post(mEncrypted, mChecksum, true, type, data);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "postDeviceMode interrupted");
             Thread.currentThread().interrupt();
             return false;
         }
@@ -938,7 +962,7 @@ class BlufiClientImpl implements BlufiParameter {
             int comfirmType = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_CONNECT_WIFI);
             return post(false, false, mRequireAck, comfirmType, (byte[]) null);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "postStaWifiInfo: interrupted");
             Thread.currentThread().interrupt();
             return false;
         }
@@ -986,7 +1010,7 @@ class BlufiClientImpl implements BlufiParameter {
             byte[] securityBytes = {(byte) params.getSoftAPSecurity()};
             return post(mEncrypted, mChecksum, mRequireAck, securityType, securityBytes);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "postSoftAPInfo: interrupted");
             Thread.currentThread().interrupt();
             return false;
         }
@@ -998,7 +1022,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             request = post(mEncrypted, mChecksum, false, type, (byte[]) null);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "post requestDeviceVersion interrupted");
             request = false;
             Thread.currentThread().interrupt();
         }
@@ -1022,7 +1046,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             request = post(mEncrypted, mChecksum, false, type, (byte[]) null);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "post requestDeviceStatus interrupted");
             request = false;
             Thread.currentThread().interrupt();
         }
@@ -1046,7 +1070,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             request = post(mEncrypted, mChecksum, mRequireAck, type, (byte[]) null);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "post requestDeviceWifiScan interrupted");
             request = false;
             Thread.currentThread().interrupt();
         }
@@ -1071,7 +1095,7 @@ class BlufiClientImpl implements BlufiParameter {
             int status = suc ? BlufiCallback.STATUS_SUCCESS : BlufiCallback.CODE_WRITE_DATA_FAILED;
             onPostCustomDataResult(status, data);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "post postCustomData interrupted");
             Thread.currentThread().interrupt();
         }
     }
@@ -1095,9 +1119,9 @@ class BlufiClientImpl implements BlufiParameter {
     private void __requestCloseConnection() {
         int type = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_CLOSE_CONNECTION);
         try {
-            post(false, false, false, type, (byte[]) null);
+            post(false, false, false, type, null);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "post requestCloseConnection interrupted");
             Thread.currentThread().interrupt();
         }
     }
@@ -1123,7 +1147,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             Thread.sleep(timeout);
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            Log.w(TAG, "sleep: interrupted");
             Thread.currentThread().interrupt();
         }
     }
@@ -1131,6 +1155,7 @@ class BlufiClientImpl implements BlufiParameter {
     private class InnerGattCallback extends BluetoothGattCallback {
 
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
+            mConnectState = newState;
             mBlufiMTU = -1;
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 if (newState == BluetoothProfile.STATE_CONNECTED) {
@@ -1181,7 +1206,7 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            if (characteristic != mNotifyChar) {
+            if (!characteristic.equals(mNotifyChar)) {
                 return;
             }
 
@@ -1205,12 +1230,12 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            if (characteristic != mWriteChar) {
+            if (!characteristic.equals(mWriteChar)) {
                 return;
             }
 
             synchronized (mWriteLock) {
-                mWriteLock.notifyAll();
+                mWriteLock.notify();
             }
 
             if (mUserGattCallback != null) {
@@ -1251,7 +1276,7 @@ class BlufiClientImpl implements BlufiParameter {
         @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                mBlufiMTU = mtu - 6;
+                mBlufiMTU = mtu - 4; // Three bytes BLE header, one byte reserved
             }
             if (mUserGattCallback != null) {
                 mUserGattCallback.onMtuChanged(gatt, mtu, status);

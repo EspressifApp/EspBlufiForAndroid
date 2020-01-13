@@ -382,14 +382,16 @@ public class BlufiActivity extends BaseActivity {
 
             updateMessage("Discover service and characteristics success", false);
 
-            int mtu = (int) BlufiApp.getInstance().settingsGet(
-                    SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
-            boolean requestMtu = gatt.requestMtu(mtu);
-            if (!requestMtu) {
-                mLog.w("Request mtu failed");
-                updateMessage(String.format(Locale.ENGLISH, "Request mtu %d failed", mtu), false);
-                onGattServiceCharacteristicDiscovered();
-            }
+//            int mtu = (int) BlufiApp.getInstance().settingsGet(
+//                    SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
+//            boolean requestMtu = gatt.requestMtu(mtu);
+//            if (!requestMtu) {
+//                mLog.w("Request mtu failed");
+//                updateMessage(String.format(Locale.ENGLISH, "Request mtu %d failed", mtu), false);
+//                onGattServiceCharacteristicDiscovered();
+//            }
+            client.setPostPackageLengthLimit(20);
+            onGattServiceCharacteristicDiscovered();
         }
 
         @Override

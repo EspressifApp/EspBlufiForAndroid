@@ -117,34 +117,31 @@ public class BlufiStatusResponse {
                 sb.append("NULL");
                 break;
             case BlufiParameter.OP_MODE_STA:
-                sb.append("STA");
+                sb.append("Station");
                 break;
             case BlufiParameter.OP_MODE_SOFTAP:
-                sb.append("SOFTAP");
+                sb.append("SoftAP");
                 break;
             case BlufiParameter.OP_MODE_STASOFTAP:
-                sb.append("Sta/Softap");
+                sb.append("Station/SoftAP");
                 break;
         }
         sb.append('\n');
 
-        switch (mStaConnecionStatus) {
-            case 0:
-                sb.append("Sta connect wifi now");
-                break;
-            default:
-                sb.append("Sta disconnect wifi now");
-                break;
+        if (isStaConnectWifi()) {
+            sb.append("Station connect wifi now");
+        } else {
+            sb.append("Station disconnect wifi now");
         }
         sb.append('\n');
         if (mStaBSSID != null) {
-            sb.append("Sta connect wifi bssid: ").append(mStaBSSID).append('\n');
+            sb.append("Station connect wifi bssid: ").append(mStaBSSID).append('\n');
         }
         if (mStaSSID != null) {
-            sb.append("Sta connect wifi ssid: ").append(mStaSSID).append('\n');
+            sb.append("Station connect wifi ssid: ").append(mStaSSID).append('\n');
         }
         if (mStaPassword != null) {
-            sb.append("Sta connect wifi password: ").append(mStaPassword).append('\n');
+            sb.append("Station connect wifi password: ").append(mStaPassword).append('\n');
         }
 
         switch (mSoftAPSecurity) {
