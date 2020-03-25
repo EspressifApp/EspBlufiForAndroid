@@ -39,9 +39,9 @@ import java.util.Set;
 
 import blufi.espressif.params.BlufiConfigureParams;
 import blufi.espressif.params.BlufiParameter;
-import io.reactivex.Observable;
-import io.reactivex.android.schedulers.AndroidSchedulers;
-import io.reactivex.schedulers.Schedulers;
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.core.Observable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class ConfigureOptionsActivity extends BaseActivity implements AdapterView.OnItemSelectedListener {
     private static final int OP_MODE_POS_STA = 0;

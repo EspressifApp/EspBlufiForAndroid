@@ -8,6 +8,7 @@ import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Intent;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -333,6 +334,7 @@ public class BlufiActivity extends BaseActivity {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 updateMessage(String.format(Locale.ENGLISH, "Set mtu complete, mtu=%d ", mtu), false);
             } else {
+                mBlufiClient.setPostPackageLengthLimit(20);
                 updateMessage(String.format(Locale.ENGLISH, "Set mtu failed, mtu=%d, status=%d", mtu, status), false);
             }
 
@@ -382,16 +384,20 @@ public class BlufiActivity extends BaseActivity {
 
             updateMessage("Discover service and characteristics success", false);
 
-//            int mtu = (int) BlufiApp.getInstance().settingsGet(
-//                    SettingsConstants.PREF_SETTINGS_KEY_MTU_LENGTH, BlufiConstants.DEFAULT_MTU_LENGTH);
-//            boolean requestMtu = gatt.requestMtu(mtu);
-//            if (!requestMtu) {
-//                mLog.w("Request mtu failed");
-//                updateMessage(String.format(Locale.ENGLISH, "Request mtu %d failed", mtu), false);
-//                onGattServiceCharacteristicDiscovered();
-//            }
-            client.setPostPackageLengthLimit(20);
-            onGattServiceCharacteristicDiscovered();
+            int mtu = BlufiConstants.DEFAULT_MTU_LENGTH;
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q
+                    && Build.MANUFACTURER.toLowerCase().startsWith("samsung")) {
+                mtu = 23;
+            }
+
+            boolean requestMtu = gatt.requestMtu(mtu);
+            if (!requestMtu) {
+                mLog.w("Request mtu failed");
+
+                client.setPostPackageLengthLimit(20);
+                updateMessage(String.format(Locale.ENGLISH, "Request mtu %d failed", mtu), false);
+                onGattServiceCharacteristicDiscovered();
+            }
         }
 
         @Override

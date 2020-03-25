@@ -7,8 +7,8 @@ android {
         applicationId "com.espressif.espblufi"
         minSdkVersion 21
         targetSdkVersion 29
-        versionCode 23
-        versionName "1.5.2"
+        versionCode 24
+        versionName "1.5.3"
     }
 
     buildTypes {
@@ -26,13 +26,13 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 
+    implementation 'com.google.android.material:material:1.1.0'
     implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'com.google.android.material:material:1.0.0'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation 'androidx.preference:preference:1.1.0'
 
-    implementation 'io.reactivex.rxjava2:rxjava:2.2.16'
-    implementation 'io.reactivex.rxjava2:rxandroid:2.1.1'
+    implementation 'io.reactivex.rxjava3:rxjava:3.0.0'
+    implementation 'io.reactivex.rxjava3:rxandroid:3.0.0'
 
     implementation project(':blufilibrary')
 }
