@@ -18,6 +18,7 @@ import android.util.Log;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -42,6 +43,7 @@ import blufi.espressif.security.BlufiMD5;
 
 class BlufiClientImpl implements BlufiParameter {
     private static final String TAG = "BlufiClientImpl";
+    private static final boolean DEBUG = false;
 
     private static final int DEFAULT_PACKAGE_LENGTH = 20;
     private static final int PACKAGE_HEADER_LENGTH = 4;
@@ -292,6 +294,9 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             }
             synchronized (mWriteLock) {
+                if (DEBUG) {
+                    Log.i(TAG, "gattWrite= " + Arrays.toString(data));
+                }
                 mWriteChar.setValue(data);
                 mGatt.writeCharacteristic(mWriteChar);
                 mWriteLock.wait();
@@ -426,6 +431,9 @@ class BlufiClientImpl implements BlufiParameter {
         if (response == null) {
             Log.w(TAG, "parseNotification null data");
             return -1;
+        }
+        if (DEBUG) {
+            Log.d(TAG, "Notification= " + Arrays.toString(response));
         }
 
         if (response.length < 4) {
@@ -1126,7 +1134,7 @@ class BlufiClientImpl implements BlufiParameter {
         }
     }
 
-    private abstract class ThrowableRunnable implements Runnable {
+    private abstract static class ThrowableRunnable implements Runnable {
         @Override
         public void run() {
             try {
