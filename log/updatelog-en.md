@@ -2,7 +2,10 @@
 
 # Update Log
 
-# v1.5.2
+## v1.5.3
+- Fix some bugs
+
+## v1.5.2
 - Fixed an issue where threads could lock up when calling BlufiClient.close()
 - A bug will occur if we call BluetoothGatt.requestMTU(int) after connecting BLE on Samsung Android 10, so we cancel call it
 

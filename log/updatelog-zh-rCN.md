@@ -2,6 +2,9 @@
 
 # 更新日志
 
+## 1.5.3
+- 修复 BUG
+
 ## 1.5.2
 - 修复调用 BlufiClient.close() 时线程可能锁死的问题
 - 连接 BLE 后取消设置 Gatt MTU 值，因为在三星手机的 Android 10 系统上会出现 BUG
