@@ -20,25 +20,11 @@ This guide is a basic introduction to the APIs provided by Espressif to facilita
 	client.setGattCallback(gattCallback);
     ```
 
-    ```java
-    // These two functions of the BlufiClient instance  must be called by the two functions of BluetoothGattCallback respectively. Otherwise, the data communication fails.
-
-    @Override
-    public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-        client.onCharacteristicWrite(gatt, characteristic, status);
-    }
-
-    @Override
-    public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-        client.onCharacteristicChanged(gatt, characteristic);
-    }
-    ```
-
 - Configure the maximum length of each data packet
 
     ```java
     int limit = 128; // Configure the maximum length of each post packet. If the length of a post packet exceeds the maximum packet length, the post packet will be split into fragments.
-    client.setPostPackageLengthLimit(limit)
+    client.setPostPackageLengthLimit(limit);
     ```
 
 - Establish a BLE connection
