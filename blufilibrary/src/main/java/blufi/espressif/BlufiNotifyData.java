@@ -47,22 +47,11 @@ class BlufiNotifyData {
         mFrameCtrlValue = frameCtrl;
     }
 
-    void addData(byte b) {
-        mDataOS.write(b);
-    }
-
-    void addData(byte[] bytes) {
-        mDataOS.write(bytes, 0, bytes.length);
+    void addData(byte[] bytes, int offset) {
+        mDataOS.write(bytes, offset, bytes.length - offset);
     }
 
     byte[] getDataArray() {
         return mDataOS.toByteArray();
-    }
-
-    void clear() {
-        mTypeValue = 0;
-        mPkgType = 0;
-        mSubType = 0;
-        mDataOS.reset();
     }
 }

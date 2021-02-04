@@ -4,11 +4,11 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Intent;
 import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
@@ -26,10 +26,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BaseActivity;
-import com.espressif.espblufi.app.BlufiApp;
 import com.espressif.espblufi.app.BlufiLog;
 import com.espressif.espblufi.constants.BlufiConstants;
-import com.espressif.espblufi.constants.SettingsConstants;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -38,6 +36,7 @@ import java.util.Locale;
 import blufi.espressif.BlufiCallback;
 import blufi.espressif.BlufiClient;
 import blufi.espressif.params.BlufiConfigureParams;
+import blufi.espressif.params.BlufiParameter;
 import blufi.espressif.response.BlufiScanResult;
 import blufi.espressif.response.BlufiStatusResponse;
 import blufi.espressif.response.BlufiVersionResponse;
@@ -351,6 +350,16 @@ public class BlufiActivity extends BaseActivity {
         }
 
         @Override
+        public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            mLog.d(String.format(Locale.ENGLISH, "onDescriptorWrite status=%d", status));
+            if (descriptor.getUuid().equals(BlufiParameter.UUID_NOTIFICATION_DESCRIPTOR) &&
+                    descriptor.getCharacteristic().getUuid().equals(BlufiParameter.UUID_NOTIFICATION_CHARACTERISTIC)) {
+                String msg = String.format(Locale.ENGLISH, "Set notification enable %s", (status == BluetoothGatt.GATT_SUCCESS ? " complete" : " failed"));
+                updateMessage(msg, false);
+            }
+        }
+
+        @Override
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 gatt.disconnect();
@@ -385,16 +394,10 @@ public class BlufiActivity extends BaseActivity {
             updateMessage("Discover service and characteristics success", false);
 
             int mtu = BlufiConstants.DEFAULT_MTU_LENGTH;
-            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q
-                    && Build.MANUFACTURER.toLowerCase().startsWith("samsung")) {
-                mtu = 23;
-            }
-
+            mLog.d("Request MTU " + mtu);
             boolean requestMtu = gatt.requestMtu(mtu);
             if (!requestMtu) {
                 mLog.w("Request mtu failed");
-
-                client.setPostPackageLengthLimit(20);
                 updateMessage(String.format(Locale.ENGLISH, "Request mtu %d failed", mtu), false);
                 onGattServiceCharacteristicDiscovered();
             }
@@ -412,7 +415,7 @@ public class BlufiActivity extends BaseActivity {
         }
 
         @Override
-        public void onConfigureResult(BlufiClient client, int status) {
+        public void onPostConfigureParams(BlufiClient client, int status) {
             if (status == STATUS_SUCCESS) {
                 updateMessage("Post configure params complete", false);
             } else {
@@ -545,7 +548,7 @@ public class BlufiActivity extends BaseActivity {
         }
     }
 
-    private class MsgHolder extends RecyclerView.ViewHolder {
+    private static class MsgHolder extends RecyclerView.ViewHolder {
         TextView text1;
 
         MsgHolder(View itemView) {
@@ -577,7 +580,7 @@ public class BlufiActivity extends BaseActivity {
         }
     }
 
-    private class Message {
+    private static class Message {
         String text;
         boolean isNotification;
     }

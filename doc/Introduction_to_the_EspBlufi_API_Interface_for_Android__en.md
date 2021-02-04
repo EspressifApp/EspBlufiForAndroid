@@ -187,7 +187,7 @@ This guide is a basic introduction to the APIs provided by Espressif to facilita
     ```java
     // The result of data sending obtained with the BlufiCallback function
     @Override
-    public void onConfigureResult(BlufiClient client, int status) {
+    public void onPostConfigureParams(BlufiClient client, int status) {
         // status is the result: "0" - successful, otherwise - failed.
     }
 

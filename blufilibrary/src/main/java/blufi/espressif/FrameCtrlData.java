@@ -9,7 +9,7 @@ class FrameCtrlData {
     private static final int FRAME_CTRL_POSITION_REQUIRE_ACK = 3;
     private static final int FRAME_CTRL_POSITION_FRAG = 4;
 
-    private int mValue;
+    private final int mValue;
 
     FrameCtrlData(int frameCtrlValue) {
         mValue = frameCtrlValue;
@@ -27,7 +27,7 @@ class FrameCtrlData {
         return check(FRAME_CTRL_POSITION_CHECKSUM);
     }
 
-    boolean requireAck() {
+    boolean isAckRequirement() {
         return check(FRAME_CTRL_POSITION_REQUIRE_ACK);
     }
 

@@ -30,6 +30,7 @@ public abstract class BlufiCallback {
 
     /**
      * Callback invoked after BluetoothGattCallback receive onServicesDiscovered
+     * User can post Blufi packet now.
      *
      * @param client BlufiClient
      * @param gatt BluetoothGatt
@@ -47,7 +48,7 @@ public abstract class BlufiCallback {
      * @param client BlufiClient
      * @param pkgType Blufi package type
      * @param subType Blufi subtype
-     * @param data notified
+     * @param data Blufi data
      * @return true if the callback consumed the notification, false otherwise.
      */
     public boolean onGattNotification(BlufiClient client, int pkgType, int subType, byte[] data) {
@@ -73,12 +74,19 @@ public abstract class BlufiCallback {
     }
 
     /**
+     * @deprecated use {@link #onPostConfigureParams(BlufiClient, int)}
+     */
+    public void onConfigureResult(BlufiClient client, int status) {
+    }
+
+    /**
      * Callback invoked when post config data over
      *
      * @param client BlufiClient
      * @param status {@link #STATUS_SUCCESS} means post data success
      */
-    public void onConfigureResult(BlufiClient client, int status) {
+    public void onPostConfigureParams(BlufiClient client, int status) {
+        onConfigureResult(client, status);
     }
 
     /**
@@ -102,7 +110,7 @@ public abstract class BlufiCallback {
     }
 
     /**
-     * Callback invoked when received device scan result
+     * Callback invoked when received device scan results
      *
      * @param client BlufiClient
      * @param status {@link #STATUS_SUCCESS} means response is valid

@@ -43,11 +43,14 @@ import blufi.espressif.security.BlufiMD5;
 
 class BlufiClientImpl implements BlufiParameter {
     private static final String TAG = "BlufiClientImpl";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = BuildConfig.DEBUG;
 
     private static final int DEFAULT_PACKAGE_LENGTH = 20;
     private static final int PACKAGE_HEADER_LENGTH = 4;
-    private static final int MIN_PACKAGE_LENGTH = 7;
+    private static final int MIN_PACKAGE_LENGTH = 20;
+
+    private static final byte NEG_SECURITY_SET_TOTAL_LENGTH = 0x00;
+    private static final byte NEG_SECURITY_SET_ALL_DATA = 0x01;
 
     private static final String DH_P = "cf5cf5c38419a724957ff5dd323b9c45c3cdd261eb740f69aa94b8bb1a5c9640" +
             "9153bd76b24222d03274e4725a5406092e9e82e9135c643cae98132b0d95f7d6" +
@@ -67,6 +70,7 @@ class BlufiClientImpl implements BlufiParameter {
     private BluetoothGatt mGatt;
     private BluetoothGattCharacteristic mWriteChar;
     private final Lock mWriteLock;
+    private final LinkedBlockingQueue<Boolean> mWriteResultQueue;
     private BluetoothGattCharacteristic mNotifyChar;
 
     private int mPackageLengthLimit = -1;
@@ -85,11 +89,11 @@ class BlufiClientImpl implements BlufiParameter {
 
     private boolean mRequireAck = false;
 
-    private SecurityCallback mSecurityCallback;
-    private LinkedBlockingQueue<BigInteger> mDevicePublicKeyQueue;
+    private final SecurityCallback mSecurityCallback;
+    private final LinkedBlockingQueue<BigInteger> mDevicePublicKeyQueue;
 
     private ExecutorService mThreadPool;
-    private Handler mUIHandler;
+    private final Handler mUIHandler;
 
     private int mConnectState = BluetoothGatt.STATE_DISCONNECTED;
 
@@ -110,6 +114,7 @@ class BlufiClientImpl implements BlufiParameter {
         mUIHandler = new Handler(Looper.getMainLooper());
 
         mWriteLock = new ReentrantLock(true);
+        mWriteResultQueue = new LinkedBlockingQueue<>();
     }
 
     void setGattCallback(BluetoothGattCallback callback) {
@@ -137,6 +142,7 @@ class BlufiClientImpl implements BlufiParameter {
         synchronized (mWriteLock) {
             mWriteLock.notifyAll();
         }
+        mWriteResultQueue.clear();
         if (mThreadPool != null) {
             mThreadPool.shutdownNow();
             mThreadPool = null;
@@ -287,29 +293,28 @@ class BlufiClientImpl implements BlufiParameter {
         return mConnectState == BluetoothGatt.STATE_CONNECTED;
     }
 
-    private void gattWrite(byte[] data) throws InterruptedException {
+    private boolean gattWrite(byte[] data) throws InterruptedException {
         mWriteLock.lock();
         try {
             if (!isConnected()) {
-                return;
+                return false;
             }
-            synchronized (mWriteLock) {
-                if (DEBUG) {
-                    Log.i(TAG, "gattWrite= " + Arrays.toString(data));
-                }
-                mWriteChar.setValue(data);
-                mGatt.writeCharacteristic(mWriteChar);
-                mWriteLock.wait();
+            if (DEBUG) {
+                Log.i(TAG, "gattWrite= " + Arrays.toString(data));
             }
+            mWriteChar.setValue(data);
+            mGatt.writeCharacteristic(mWriteChar);
+            Boolean result = mWriteResultQueue.take();
+            return result != null && result;
         } finally {
             mWriteLock.unlock();
         }
     }
 
-    private boolean receiveAck(int sequence) {
+    private boolean receiveAck(int expectAck) {
         try {
             int ack = mAck.take();
-            return ack == sequence;
+            return ack == expectAck;
         } catch (InterruptedException e) {
             Log.w(TAG, "receiveAck: interrupted");
             Thread.currentThread().interrupt();
@@ -328,53 +333,53 @@ class BlufiClientImpl implements BlufiParameter {
 
     private boolean postNonData(boolean encrypt, boolean checksum, boolean requireAck, int type)
             throws InterruptedException {
-        int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, false);
         int sequence = generateSendSequence();
-        int dataLen = 0;
 
-        byte[] postBytes = getPostBytes(type, frameCtrl, sequence, dataLen, null);
-        gattWrite(postBytes);
+        byte[] postBytes = getPostBytes(type, encrypt, checksum, requireAck, false, sequence, null);
+        boolean posted = gattWrite(postBytes);
 
-        return !requireAck || receiveAck(sequence);
+        return posted && (!requireAck || receiveAck(sequence));
     }
 
     private boolean postContainData(boolean encrypt, boolean checksum, boolean requireAck, int type, byte[] data)
             throws InterruptedException {
         ByteArrayInputStream dataIS = new ByteArrayInputStream(data);
-        ByteArrayOutputStream postOS = new ByteArrayOutputStream();
+        ByteArrayOutputStream dataContent = new ByteArrayOutputStream();
         int pkgLengthLimit = mPackageLengthLimit > 0 ? mPackageLengthLimit :
                 (mBlufiMTU > 0 ? mBlufiMTU : DEFAULT_PACKAGE_LENGTH);
         int postDataLengthLimit = pkgLengthLimit - PACKAGE_HEADER_LENGTH;
-        postDataLengthLimit -= 2; // if flag, two bytes total length in data
+        postDataLengthLimit -= 2; // if frag, two bytes total length in data
         if (checksum) {
             postDataLengthLimit -= 2;
         }
-        byte[] dateBuf = new byte[postDataLengthLimit];
+        byte[] dataBuf = new byte[postDataLengthLimit];
         while (true) {
-            int read = dataIS.read(dateBuf, 0, dateBuf.length);
+            int read = dataIS.read(dataBuf, 0, dataBuf.length);
             if (read == -1) {
                 break;
             }
 
-            postOS.write(dateBuf, 0, read);
-            if (dataIS.available() == 2) {
-                postOS.write(dataIS.read());
-                postOS.write(dataIS.read());
+            dataContent.write(dataBuf, 0, read);
+            if (dataIS.available() > 0 && dataIS.available() <= 2) {
+                read = dataIS.read(dataBuf, 0, dataIS.available());
+                dataContent.write(dataBuf, 0, read);
             }
             boolean frag = dataIS.available() > 0;
-            int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, frag);
             int sequence = generateSendSequence();
             if (frag) {
-                int totalLen = postOS.size() + dataIS.available();
-                byte[] tempData = postOS.toByteArray();
-                postOS.reset();
-                postOS.write(totalLen & 0xff);
-                postOS.write(totalLen >> 8 & 0xff);
-                postOS.write(tempData, 0, tempData.length);
+                int totalLen = dataContent.size() + dataIS.available();
+                byte[] tempData = dataContent.toByteArray();
+                dataContent.reset();
+                dataContent.write(totalLen & 0xff);
+                dataContent.write(totalLen >> 8 & 0xff);
+                dataContent.write(tempData, 0, tempData.length);
             }
-            byte[] postBytes = getPostBytes(type, frameCtrl, sequence, postOS.size(), postOS.toByteArray());
-            postOS.reset();
-            gattWrite(postBytes);
+            byte[] postBytes = getPostBytes(type, encrypt, checksum, requireAck, frag, sequence, dataContent.toByteArray());
+            dataContent.reset();
+            boolean posted = gattWrite(postBytes);
+            if (!posted) {
+                return false;
+            }
             if (frag) {
                 if (requireAck && !receiveAck(sequence)) {
                     return false;
@@ -388,30 +393,28 @@ class BlufiClientImpl implements BlufiParameter {
         return true;
     }
 
-    private byte[] getPostBytes(int type, int frameCtrl, int sequence, int dataLength, byte[] data) {
+    private byte[] getPostBytes(int type, boolean encrypt, boolean checksum, boolean requireAck, boolean hasFrag, int sequence, byte[] data) {
         ByteArrayOutputStream byteOS = new ByteArrayOutputStream();
+
+        int dataLength = data == null ? 0 : data.length;
+        int frameCtrl = FrameCtrlData.getFrameCTRLValue(encrypt, checksum, DIRECTION_OUTPUT, requireAck, hasFrag);
+
         byteOS.write(type);
         byteOS.write(frameCtrl);
         byteOS.write(sequence);
         byteOS.write(dataLength);
 
-        FrameCtrlData frameCtrlData = new FrameCtrlData(frameCtrl);
         byte[] checksumBytes = null;
-        if (frameCtrlData.isChecksum()) {
+        if (checksum) {
             byte[] willCheckBytes = new byte[]{(byte) sequence, (byte) dataLength};
-            if (data != null) {
-                ByteArrayOutputStream os = new ByteArrayOutputStream(willCheckBytes.length + data.length);
-                os.write(willCheckBytes, 0, willCheckBytes.length);
-                os.write(data, 0, data.length);
-                willCheckBytes = os.toByteArray();
+            int crc = BlufiCRC.calcCRC(0, willCheckBytes);
+            if (dataLength > 0) {
+                crc = BlufiCRC.calcCRC(crc, data);
             }
-            int checksum = BlufiCRC.calcCRC(0, willCheckBytes);
-            byte checksumByte1 = (byte) (checksum & 0xff);
-            byte checksumByte2 = (byte) ((checksum >> 8) & 0xff);
-            checksumBytes = new byte[]{checksumByte1, checksumByte2};
+            checksumBytes = new byte[]{(byte) (crc & 0xff), (byte) (crc >> 8 & 0xff)};
         }
 
-        if (frameCtrlData.isEncrypted() && data != null) {
+        if (encrypt && data != null && data.length > 0) {
             BlufiAES aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
             data = aes.encrypt(data);
         }
@@ -433,7 +436,7 @@ class BlufiClientImpl implements BlufiParameter {
             return -1;
         }
         if (DEBUG) {
-            Log.d(TAG, "Notification= " + Arrays.toString(response));
+            Log.d(TAG, "parseNotification Notification= " + Arrays.toString(response));
         }
 
         if (response.length < 4) {
@@ -477,17 +480,13 @@ class BlufiClientImpl implements BlufiParameter {
             int respChecksum1 = toInt(response[response.length - 1]);
             int respChecksum2 = toInt(response[response.length - 2]);
 
-            ByteArrayOutputStream checkByteOS = new ByteArrayOutputStream();
-            checkByteOS.write(sequence);
-            checkByteOS.write(dataLen);
-            for (byte b : dataBytes) {
-                checkByteOS.write(b);
-            }
-            int checksum = BlufiCRC.calcCRC(0, checkByteOS.toByteArray());
+            int crc = BlufiCRC.calcCRC(0, new byte[]{(byte) sequence, (byte) dataLen});
+            crc = BlufiCRC.calcCRC(crc, dataBytes);
+            int calcChecksum1 = crc >> 8 & 0xff;
+            int calcChecksum2 = crc & 0xff;
 
-            int calcChecksum1 = (checksum >> 8) & 0xff;
-            int calcChecksum2 = checksum & 0xff;
             if (respChecksum1 != calcChecksum1 || respChecksum2 != calcChecksum2) {
+                Log.w(TAG, "parseNotification: read invalid checksum");
                 return -4;
             }
         }
@@ -498,9 +497,7 @@ class BlufiClientImpl implements BlufiParameter {
         } else {
             dataOffset = 0;
         }
-        for (int i = dataOffset; i < dataBytes.length; i++) {
-            notification.addData(dataBytes[i]);
-        }
+        notification.addData(dataBytes, dataOffset);
 
         return frameCtrlData.hasFrag() ? 1 : 0;
     }
@@ -508,8 +505,9 @@ class BlufiClientImpl implements BlufiParameter {
     private void parseBlufiNotifyData(BlufiNotifyData data) {
         int pkgType = data.getPkgType();
         int subType = data.getSubType();
+        byte[] dataBytes = data.getDataArray();
         if (mUserBlufiCallback != null) {
-            boolean complete = mUserBlufiCallback.onGattNotification(mClient, pkgType, subType, data.getDataArray());
+            boolean complete = mUserBlufiCallback.onGattNotification(mClient, pkgType, subType, dataBytes);
             if (complete) {
                 return;
             }
@@ -517,10 +515,10 @@ class BlufiClientImpl implements BlufiParameter {
 
         switch (pkgType) {
             case Type.Ctrl.PACKAGE_VALUE:
-                parseCtrlData(subType, data.getDataArray());
+                parseCtrlData(subType, dataBytes);
                 break;
             case Type.Data.PACKAGE_VALUE:
-                parseDataData(subType, data.getDataArray());
+                parseDataData(subType, dataBytes);
                 break;
         }
     }
@@ -556,7 +554,7 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void parseAck(byte[] data) {
-        int ack = -1;
+        int ack = 0x100;
         if (data.length > 0) {
             ack = data[0] & 0xff;
         }
@@ -593,22 +591,36 @@ class BlufiClientImpl implements BlufiParameter {
         int softAPConn = dataIS.read() & 0xff;
         response.setSoftAPConnectionCount(softAPConn);
 
+        int callbackStatus = BlufiCallback.STATUS_SUCCESS;
         while (dataIS.available() > 0) {
             int infoType = dataIS.read() & 0xff;
             int len = dataIS.read() & 0xff;
             byte[] stateBytes = new byte[len];
-            for (int i = 0; i < len; i++) {
-                stateBytes[i] = (byte) dataIS.read();
+            int read = dataIS.read(stateBytes, 0, len);
+            if (read != len) {
+                callbackStatus = BlufiCallback.CODE_INVALID_DATA;
+                break;
             }
-
             parseWifiStateData(response, infoType, stateBytes);
         }
 
-        onStatusResponse(BlufiCallback.STATUS_SUCCESS, response);
+        onStatusResponse(callbackStatus, response);
     }
 
     private void parseWifiStateData(BlufiStatusResponse response, int infoType, byte[] data) {
         switch (infoType) {
+            case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_BSSID:
+                String staBssid = toHex(data);
+                response.setStaBSSID(staBssid);
+                break;
+            case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_SSID:
+                String staSsid = new String(data);
+                response.setStaSSID(staSsid);
+                break;
+            case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_PASSWORD:
+                String staPassword = new String(data);
+                response.setStaPassword(staPassword);
+                break;
             case BlufiParameter.Type.Data.SUBTYPE_SOFTAP_AUTH_MODE:
                 int authMode = toInt(data[0]);
                 response.setSoftAPSecrity(authMode);
@@ -629,18 +641,6 @@ class BlufiClientImpl implements BlufiParameter {
                 String softapSSID = new String(data);
                 response.setSoftAPSSID(softapSSID);
                 break;
-            case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_BSSID:
-                String staBssid = toHex(data);
-                response.setStaBSSID(staBssid);
-                break;
-            case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_SSID:
-                String staSsid = new String(data);
-                response.setStaSSID(staSsid);
-                break;
-            case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_PASSWORD:
-                String staPassword = new String(data);
-                response.setStaPassword(staPassword);
-                break;
         }
     }
 
@@ -650,11 +650,15 @@ class BlufiClientImpl implements BlufiParameter {
         ByteArrayInputStream dataReader = new ByteArrayInputStream(data);
         while (dataReader.available() > 0) {
             int length = dataReader.read() & 0xff;
+            if (length < 1) {
+                Log.w(TAG, "Parse WifiScan invalid length");
+                break;
+            }
             byte rssi = (byte) dataReader.read();
             byte[] ssidBytes = new byte[length - 1];
             int ssidRead = dataReader.read(ssidBytes, 0, ssidBytes.length);
             if (ssidRead != ssidBytes.length) {
-                Log.w(TAG, "Parse WifiScan failed");
+                Log.w(TAG, "Parse WifiScan parse ssid failed");
                 break;
             }
 
@@ -745,15 +749,15 @@ class BlufiClientImpl implements BlufiParameter {
         final int dhLength = 1024;
         final BigInteger dhP = new BigInteger(DH_P, radix);
         final BigInteger dhG = new BigInteger(DH_G);
-        BlufiDH espDH;
+        BlufiDH blufiDH;
         String p;
         String g;
         String k;
         do {
-            espDH = new BlufiDH(dhP, dhG, dhLength);
-            p = espDH.getP().toString(radix);
-            g = espDH.getG().toString(radix);
-            k = getPublicValue(espDH);
+            blufiDH = new BlufiDH(dhP, dhG, dhLength);
+            p = blufiDH.getP().toString(radix);
+            g = blufiDH.getG().toString(radix);
+            k = getPublicValue(blufiDH);
         } while (k == null);
 
         byte[] pBytes = toBytes(p);
@@ -765,7 +769,7 @@ class BlufiClientImpl implements BlufiParameter {
         int pgkLength = pBytes.length + gBytes.length + kBytes.length + 6;
         int pgkLen1 = (pgkLength >> 8) & 0xff;
         int pgkLen2 = pgkLength & 0xff;
-        dataOS.write(NEG_SET_SEC_TOTAL_LEN);
+        dataOS.write(NEG_SECURITY_SET_TOTAL_LENGTH);
         dataOS.write((byte) pgkLen1);
         dataOS.write((byte) pgkLen2);
         try {
@@ -782,7 +786,7 @@ class BlufiClientImpl implements BlufiParameter {
         sleep(10);
 
         dataOS.reset();
-        dataOS.write(NEG_SET_SEC_ALL_DATA);
+        dataOS.write(NEG_SECURITY_SET_ALL_DATA);
 
         int pLength = pBytes.length;
         int pLen1 = (pLength >> 8) & 0xff;
@@ -817,7 +821,7 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         dataOS.reset();
-        return espDH;
+        return blufiDH;
     }
 
     private String getPublicValue(BlufiDH espDH) {
@@ -879,62 +883,62 @@ class BlufiClientImpl implements BlufiParameter {
         switch (opMode) {
             case OP_MODE_NULL:
                 if (!postDeviceMode(opMode)) {
-                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
+                    onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
                     return;
                 }
 
-                onConfigureResult(BlufiCallback.STATUS_SUCCESS);
+                onPostConfigureParams(BlufiCallback.STATUS_SUCCESS);
                 return;
             case OP_MODE_STA:
                 if (!postDeviceMode(opMode)) {
-                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
+                    onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
                     return;
                 }
                 if (!postStaWifiInfo(params)) {
-                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_POST_STA);
+                    onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_POST_STA);
                     return;
                 }
 
-                onConfigureResult(BlufiCallback.STATUS_SUCCESS);
+                onPostConfigureParams(BlufiCallback.STATUS_SUCCESS);
                 return;
             case OP_MODE_SOFTAP:
                 if (!postDeviceMode(opMode)) {
-                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
+                    onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
                     return;
                 }
                 if (!postSoftAPInfo(params)) {
-                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_POST_SOFTAP);
+                    onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_POST_SOFTAP);
                     return;
                 }
 
-                onConfigureResult(BlufiCallback.STATUS_SUCCESS);
+                onPostConfigureParams(BlufiCallback.STATUS_SUCCESS);
                 return;
             case OP_MODE_STASOFTAP:
                 if (!postDeviceMode(opMode)) {
-                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
+                    onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_SET_OPMODE);
                     return;
                 }
                 if (!postStaWifiInfo(params)) {
-                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_POST_STA);
+                    onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_POST_STA);
                     return;
                 }
                 if (!postSoftAPInfo(params)) {
-                    onConfigureResult(BlufiCallback.CODE_CONF_ERR_POST_SOFTAP);
+                    onPostConfigureParams(BlufiCallback.CODE_CONF_ERR_POST_SOFTAP);
                     return;
                 }
 
-                onConfigureResult(BlufiCallback.STATUS_SUCCESS);
+                onPostConfigureParams(BlufiCallback.STATUS_SUCCESS);
                 break;
             default:
-                onConfigureResult(BlufiCallback.CODE_CONF_INVALID_OPMODE);
+                onPostConfigureParams(BlufiCallback.CODE_CONF_INVALID_OPMODE);
                 break;
         }
     }
 
-    private void onConfigureResult(final int status) {
+    private void onPostConfigureParams(final int status) {
         mUIHandler.post(() -> {
             if (mUserBlufiCallback != null) {
-                mUserBlufiCallback.onConfigureResult(mClient, status);
+                mUserBlufiCallback.onPostConfigureParams(mClient, status);
             }
         });
     }
@@ -968,7 +972,7 @@ class BlufiClientImpl implements BlufiParameter {
             sleep(10);
 
             int comfirmType = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_CONNECT_WIFI);
-            return post(false, false, mRequireAck, comfirmType, (byte[]) null);
+            return post(false, false, mRequireAck, comfirmType, null);
         } catch (InterruptedException e) {
             Log.w(TAG, "postStaWifiInfo: interrupted");
             Thread.currentThread().interrupt();
@@ -1028,7 +1032,7 @@ class BlufiClientImpl implements BlufiParameter {
         int type = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_GET_VERSION);
         boolean request;
         try {
-            request = post(mEncrypted, mChecksum, false, type, (byte[]) null);
+            request = post(mEncrypted, mChecksum, false, type, null);
         } catch (InterruptedException e) {
             Log.w(TAG, "post requestDeviceVersion interrupted");
             request = false;
@@ -1052,7 +1056,7 @@ class BlufiClientImpl implements BlufiParameter {
         int type = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_GET_WIFI_STATUS);
         boolean request;
         try {
-            request = post(mEncrypted, mChecksum, false, type, (byte[]) null);
+            request = post(mEncrypted, mChecksum, false, type, null);
         } catch (InterruptedException e) {
             Log.w(TAG, "post requestDeviceStatus interrupted");
             request = false;
@@ -1076,7 +1080,7 @@ class BlufiClientImpl implements BlufiParameter {
         int type = getTypeValue(Type.Ctrl.PACKAGE_VALUE, Type.Ctrl.SUBTYPE_GET_WIFI_LIST);
         boolean request;
         try {
-            request = post(mEncrypted, mChecksum, mRequireAck, type, (byte[]) null);
+            request = post(mEncrypted, mChecksum, mRequireAck, type, null);
         } catch (InterruptedException e) {
             Log.w(TAG, "post requestDeviceWifiScan interrupted");
             request = false;
@@ -1084,7 +1088,7 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         if (!request) {
-            onDeviceScanResult(BlufiCallback.CODE_WRITE_DATA_FAILED, Collections.<BlufiScanResult>emptyList());
+            onDeviceScanResult(BlufiCallback.CODE_WRITE_DATA_FAILED, Collections.emptyList());
         }
     }
 
@@ -1205,31 +1209,40 @@ class BlufiClientImpl implements BlufiParameter {
                 final BluetoothGattService cbService = service;
                 final BluetoothGattCharacteristic cbWriteChar = writeChar;
                 final BluetoothGattCharacteristic cbNotifyChar = notifyChar;
-                mUIHandler.post(() -> {
-                    if (mUserBlufiCallback != null) {
-                        mUserBlufiCallback.onGattPrepared(mClient, gatt, cbService, cbWriteChar, cbNotifyChar);
-                    }
-                });
+                final BluetoothGattDescriptor notifyDesc = notifyChar == null ? null :
+                        notifyChar.getDescriptor(BlufiParameter.UUID_NOTIFICATION_DESCRIPTOR);
+                if (service != null && writeChar != null && notifyChar != null && notifyDesc != null) {
+                    Log.d(TAG, "Write ENABLE_NOTIFICATION_VALUE");
+                    notifyDesc.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                    gatt.writeDescriptor(notifyDesc);
+                } else {
+                    mUIHandler.post(() -> {
+                        if (mUserBlufiCallback != null) {
+                            mUserBlufiCallback.onGattPrepared(mClient, gatt, cbService, cbWriteChar, cbNotifyChar);
+                        }
+                    });
+                }
+
             }
         }
 
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            if (!characteristic.equals(mNotifyChar)) {
-                return;
-            }
-
-            if (mNotifyData == null) {
-                mNotifyData = new BlufiNotifyData();
-            }
-
-            byte[] data = characteristic.getValue();
-            // lt 0 is error, eq 0 is complete, gt 0 is continue
-            int parse = parseNotification(data, mNotifyData);
-            if (parse < 0) {
-                onError(BlufiCallback.CODE_INVALID_NOTIFICATION);
-            } else if (parse == 0) {
-                parseBlufiNotifyData(mNotifyData);
-                mNotifyData = null;
+            if (characteristic.equals(mNotifyChar)) {
+                if (mNotifyData == null) {
+                    mNotifyData = new BlufiNotifyData();
+                }
+                byte[] data = characteristic.getValue();
+                if (DEBUG) {
+                    Log.i(TAG, "Gatt Notification: " + Arrays.toString(data));
+                }
+                // lt 0 is error, eq 0 is complete, gt 0 is continue
+                int parse = parseNotification(data, mNotifyData);
+                if (parse < 0) {
+                    onError(BlufiCallback.CODE_INVALID_NOTIFICATION);
+                } else if (parse == 0) {
+                    parseBlufiNotifyData(mNotifyData);
+                    mNotifyData = null;
+                }
             }
 
             if (mUserGattCallback != null) {
@@ -1238,12 +1251,11 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
-            if (!characteristic.equals(mWriteChar)) {
-                return;
-            }
-
-            synchronized (mWriteLock) {
-                mWriteLock.notify();
+            if (characteristic.equals(mWriteChar)) {
+                if (status != BluetoothGatt.GATT_SUCCESS) {
+                    Log.w(TAG, "onCharacteristicWrite: status=" + status);
+                }
+                mWriteResultQueue.add(status == BluetoothGatt.GATT_SUCCESS);
             }
 
             if (mUserGattCallback != null) {
@@ -1264,6 +1276,18 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         public void onDescriptorWrite(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, int status) {
+            if (descriptor.getUuid().equals(BlufiParameter.UUID_NOTIFICATION_DESCRIPTOR) &&
+                    descriptor.getCharacteristic().getUuid().equals(BlufiParameter.UUID_NOTIFICATION_CHARACTERISTIC)) {
+                BluetoothGattService service = descriptor.getCharacteristic().getService();
+                BluetoothGattCharacteristic notifyChar = descriptor.getCharacteristic();
+                BluetoothGattCharacteristic writeChar = mWriteChar;
+                mUIHandler.post(() -> {
+                    if (mUserBlufiCallback != null) {
+                        mUserBlufiCallback.onGattPrepared(mClient, gatt, service, writeChar, notifyChar);
+                    }
+                });
+            }
+
             if (mUserGattCallback != null) {
                 mUserGattCallback.onDescriptorWrite(gatt, descriptor, status);
             }

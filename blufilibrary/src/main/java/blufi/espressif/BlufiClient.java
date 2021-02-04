@@ -38,6 +38,15 @@ public class BlufiClient {
     }
 
     /**
+     * Set the maximum length of each Blufi packet, the excess part will be subcontracted.
+     *
+     * @param lengthLimit the maximum length
+     */
+    public void setPostPackageLengthLimit(int lengthLimit) {
+        mImpl.setPostPackageLengthLimit(lengthLimit);
+    }
+
+    /**
      * Establish a BLE connection with BluetoothDevice
      */
     public void connect() {
@@ -52,12 +61,18 @@ public class BlufiClient {
     }
 
     /**
-     * Set the maximum length of each packet of data, the excess part will be subcontracted.
-     *
-     * @param lengthLimit the maximum length
+     * Negotiate security with device. The result will be notified in
+     * {@link BlufiCallback#onNegotiateSecurityResult(BlufiClient, int)}
      */
-    public void setPostPackageLengthLimit(int lengthLimit) {
-        mImpl.setPostPackageLengthLimit(lengthLimit);
+    public void negotiateSecurity() {
+        mImpl.negotiateSecurity();
+    }
+
+    /**
+     * Request device to disconnect the BLE connection
+     */
+    public void requestCloseConnection() {
+        mImpl.requestCloseConnection();
     }
 
     /**
@@ -77,29 +92,21 @@ public class BlufiClient {
     }
 
     /**
-     * Negotiate security with device. The result will be notified in
-     * {@link BlufiCallback#onNegotiateSecurityResult(BlufiClient, int)}
-     */
-    public void negotiateSecurity() {
-        mImpl.negotiateSecurity();
-    }
-
-    /**
-     * Configure the device to a station or soft AP. The posted result will be notified in
-     * {@link BlufiCallback#onConfigureResult(BlufiClient, int)}
-     *
-     * @param params the config parameter
-     */
-    public void configure(final BlufiConfigureParams params) {
-        mImpl.configure(params);
-    }
-
-    /**
      * Request to get wifi list that the device scanned. The wifi list will be notified in
      * {@link BlufiCallback#onDeviceScanResult(BlufiClient, int, List)}
      */
     public void requestDeviceWifiScan() {
         mImpl.requestDeviceWifiScan();
+    }
+
+    /**
+     * Configure the device to a station or soft AP. The posted result will be notified in
+     * {@link BlufiCallback#onPostConfigureParams(BlufiClient, int)}
+     *
+     * @param params the config parameter
+     */
+    public void configure(final BlufiConfigureParams params) {
+        mImpl.configure(params);
     }
 
     /**
@@ -110,12 +117,5 @@ public class BlufiClient {
      */
     public void postCustomData(byte[] data) {
         mImpl.postCustomData(data);
-    }
-
-    /**
-     * Request device to disconnect the ble connection
-     */
-    public void requestCloseConnection() {
-        mImpl.requestCloseConnection();
     }
 }

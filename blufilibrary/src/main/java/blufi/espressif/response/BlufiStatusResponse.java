@@ -110,41 +110,41 @@ public class BlufiStatusResponse {
     }
 
     public String generateValidInfo() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("op mode : ");
+        StringBuilder info = new StringBuilder();
+        info.append("OpMode: ");
         switch (mOpMode) {
             case BlufiParameter.OP_MODE_NULL:
-                sb.append("NULL");
+                info.append("NULL");
                 break;
             case BlufiParameter.OP_MODE_STA:
-                sb.append("Station");
+                info.append("Station");
                 break;
             case BlufiParameter.OP_MODE_SOFTAP:
-                sb.append("SoftAP");
+                info.append("SoftAP");
                 break;
             case BlufiParameter.OP_MODE_STASOFTAP:
-                sb.append("Station/SoftAP");
+                info.append("Station/SoftAP");
                 break;
         }
-        sb.append('\n');
+        info.append('\n');
 
         switch (mOpMode) {
             case BlufiParameter.OP_MODE_STA:
             case BlufiParameter.OP_MODE_STASOFTAP:
                 if (isStaConnectWifi()) {
-                    sb.append("Station connect wifi now");
+                    info.append("Station connect Wi-Fi now");
                 } else {
-                    sb.append("Station disconnect wifi now");
+                    info.append("Station disconnect Wi-Fi now");
                 }
-                sb.append('\n');
+                info.append('\n');
                 if (mStaBSSID != null) {
-                    sb.append("Station connect wifi bssid: ").append(mStaBSSID).append('\n');
+                    info.append("Station connect Wi-Fi bssid: ").append(mStaBSSID).append('\n');
                 }
                 if (mStaSSID != null) {
-                    sb.append("Station connect wifi ssid: ").append(mStaSSID).append('\n');
+                    info.append("Station connect Wi-Fi ssid: ").append(mStaSSID).append('\n');
                 }
                 if (mStaPassword != null) {
-                    sb.append("Station connect wifi password: ").append(mStaPassword).append('\n');
+                    info.append("Station connect Wi-Fi password: ").append(mStaPassword).append('\n');
                 }
                 break;
         }
@@ -154,39 +154,39 @@ public class BlufiStatusResponse {
             case BlufiParameter.OP_MODE_STASOFTAP:
                 switch (mSoftAPSecurity) {
                     case BlufiParameter.SOFTAP_SECURITY_OPEN:
-                        sb.append("SoftAP security: ").append("OPEN").append('\n');
+                        info.append("SoftAP security: ").append("OPEN").append('\n');
                         break;
                     case BlufiParameter.SOFTAP_SECURITY_WEP:
-                        sb.append("SoftAP security: ").append("WEP").append('\n');
+                        info.append("SoftAP security: ").append("WEP").append('\n');
                         break;
                     case BlufiParameter.SOFTAP_SECURITY_WPA:
-                        sb.append("SoftAP security: ").append("WPA").append('\n');
+                        info.append("SoftAP security: ").append("WPA").append('\n');
                         break;
                     case BlufiParameter.SOFTAP_SECURITY_WPA2:
-                        sb.append("SoftAP security: ").append("WPA2").append('\n');
+                        info.append("SoftAP security: ").append("WPA2").append('\n');
                         break;
                     case BlufiParameter.SOFTAP_SECURITY_WPA_WPA2:
-                        sb.append("SoftAP security: ").append("WPA/WPA2").append('\n');
+                        info.append("SoftAP security: ").append("WPA/WPA2").append('\n');
                         break;
                 }
                 if (mSoftAPSSID != null) {
-                    sb.append("SoftAP ssid: ").append(mSoftAPSSID).append('\n');
+                    info.append("SoftAP ssid: ").append(mSoftAPSSID).append('\n');
                 }
                 if (mSoftAPPassword != null) {
-                    sb.append("SoftAP password: ").append(mSoftAPPassword).append('\n');
+                    info.append("SoftAP password: ").append(mSoftAPPassword).append('\n');
                 }
                 if (mSoftAPChannel >= 0) {
-                    sb.append("SoftAP channel: ").append(mSoftAPChannel).append('\n');
+                    info.append("SoftAP channel: ").append(mSoftAPChannel).append('\n');
                 }
                 if (mSoftAPMaxConnCount > 0) {
-                    sb.append("SoftAP connection limit: ").append(mSoftAPMaxConnCount).append('\n');
+                    info.append("SoftAP max connection: ").append(mSoftAPMaxConnCount).append('\n');
                 }
                 if (mSoftAPConnCount >= 0) {
-                    sb.append("SoftAP current connection: ").append(mSoftAPConnCount).append('\n');
+                    info.append("SoftAP current connection: ").append(mSoftAPConnCount).append('\n');
                 }
                 break;
         }
 
-        return sb.toString();
+        return info.toString();
     }
 }

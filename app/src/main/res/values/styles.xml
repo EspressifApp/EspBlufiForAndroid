@@ -17,7 +17,7 @@
 
     <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.MaterialComponents.Light" />
 
-    <style name="BlufiActivityButtonBarButton" parent="Base.Widget.AppCompat.ActionButton">
+    <style name="BlufiActivityButtonBarButton">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:singleLine">true</item>

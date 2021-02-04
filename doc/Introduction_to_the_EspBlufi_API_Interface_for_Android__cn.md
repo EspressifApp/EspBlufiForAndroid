@@ -190,7 +190,7 @@
 	```java
 	// 设置信息发送结果在 BlufiCallback 回调方法内通知
 	@Override
-	public void onConfigureResult(BlufiClient client, int status) {
+	public void onPostConfigureParams(BlufiClient client, int status) {
 	    // Status 为 0 表示发送配置信息成功，否则为失败
 	}
 	
@@ -239,7 +239,7 @@ public void onNegotiateSecurityResult(BlufiClient client, int status) {
 }
 
 // 发送配置信息的结果
-public void onConfigureResult(BlufiClient client, int status) {
+public void onPostConfigureParams(BlufiClient client, int status) {
 }
 
 // 收到 Device 的版本信息
