@@ -12,3 +12,21 @@ This is a demo app to control the ESP device which run [BluFi](https://github.co
 
 ## Update Log
 - See [Log](log/updatelog-en.md)
+
+## Lib Source Code
+- See [lib-blufi-android](https://github.com/EspressifApp/lib-blufi-android)
+
+## How to Import
+- Add this in your root `build.gradle` at the end of repositories:
+  ```
+  allprojects {
+      repositories {
+          ...
+          maven { url 'https://jitpack.io' }
+      }
+  }
+   ```
+- And add a dependency code to your app module's `build.gradle` file. 
+  ```  
+  implementation 'com.github.EspressifApp:lib-blufi-android:2.3.4'
+  ```
