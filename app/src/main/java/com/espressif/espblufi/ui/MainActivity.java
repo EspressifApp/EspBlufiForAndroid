@@ -1,6 +1,7 @@
 package com.espressif.espblufi.ui;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.le.BluetoothLeScanner;
@@ -47,6 +48,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+@SuppressLint("MissingPermission")
 public class MainActivity extends AppCompatActivity {
     private static final long TIMEOUT_SCAN = 4000L;
 
@@ -92,7 +94,17 @@ public class MainActivity extends AppCompatActivity {
         mDeviceMap = new HashMap<>();
         mScanCallback = new ScanCallback();
 
-        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSION);
+        List<String> permissionList = new ArrayList<>();
+        permissionList.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        ActivityCompat.requestPermissions(
+                this,
+                new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.BLUETOOTH_SCAN,
+                        Manifest.permission.BLUETOOTH_CONNECT
+                },
+                REQUEST_PERMISSION
+        );
     }
 
     @Override
@@ -105,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         int size = permissions.length;
         for (int i = 0; i < size; ++i) {
             String permission = permissions[i];

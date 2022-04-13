@@ -1,5 +1,6 @@
 package com.espressif.espblufi.ui;
 
+import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
@@ -41,6 +42,7 @@ import blufi.espressif.response.BlufiScanResult;
 import blufi.espressif.response.BlufiStatusResponse;
 import blufi.espressif.response.BlufiVersionResponse;
 
+@SuppressLint("MissingPermission")
 public class BlufiActivity extends BaseActivity {
     private static final int REQUEST_CONFIGURE = 0x20;
 

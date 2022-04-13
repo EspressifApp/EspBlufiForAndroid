@@ -2,6 +2,13 @@
 
 # Update Log
 
+## v1.6.1
+- Change `targetSdkVersion` to 31
+- Update dependency libs version
+
+## v1.6.0
+- New app icon
+
 ## v1.5.3
 - Fix some bugs
 
