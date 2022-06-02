@@ -1,5 +1,5 @@
 # EspBlufiForAndroid
-This is a demo app to control the ESP device which run [BluFi](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/bluedroid/ble/blufi)
+This is a demo app to control the ESP device which run [BluFi](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/blufi)
 
 ## Lib Source Code
 - See [lib-blufi-android](https://github.com/EspressifApp/lib-blufi-android)
