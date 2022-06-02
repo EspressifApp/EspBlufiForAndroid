@@ -14,7 +14,6 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -22,13 +21,15 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BaseActivity;
 import com.espressif.espblufi.app.BlufiLog;
 import com.espressif.espblufi.constants.BlufiConstants;
+import com.espressif.espblufi.databinding.BlufiActivityBinding;
+import com.espressif.espblufi.databinding.BlufiContentBinding;
+import com.espressif.espblufi.databinding.BlufiMessageItemBinding;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -52,25 +53,17 @@ public class BlufiActivity extends BaseActivity {
     private BlufiClient mBlufiClient;
     private volatile boolean mConnected;
 
-    private RecyclerView mMsgRecyclerView;
     private List<Message> mMsgList;
     private MsgAdapter mMsgAdapter;
 
-    private Button mBlufiConnectBtn;
-    private Button mBlufiDisconnectBtn;
-    private Button mBlufiSecurityBtn;
-    private Button mBlufiVersionBtn;
-    private Button mBlufiConfigureBtn;
-    private Button mBlufiDeviceStatusBtn;
-    private Button mBlufiDeviceScanBtn;
-    private Button mBlufiCustomBtn;
+    private BlufiContentBinding mContent;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.blufi_activity);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        BlufiActivityBinding mBinding = BlufiActivityBinding.inflate(getLayoutInflater());
+        setContentView(mBinding.getRoot());
+        setSupportActionBar(mBinding.toolbar);
         setHomeAsUpEnable(true);
 
         mDevice = getIntent().getParcelableExtra(BlufiConstants.KEY_BLE_DEVICE);
@@ -78,51 +71,44 @@ public class BlufiActivity extends BaseActivity {
         String deviceName = mDevice.getName() == null ? getString(R.string.string_unknown) : mDevice.getName();
         setTitle(deviceName);
 
-        mMsgRecyclerView = findViewById(R.id.recycler_view);
+        mContent = mBinding.content;
+
         mMsgList = new LinkedList<>();
         mMsgAdapter = new MsgAdapter();
-        mMsgRecyclerView.setAdapter(mMsgAdapter);
+        mContent.recyclerView.setAdapter(mMsgAdapter);
 
         BlufiButtonListener clickListener = new BlufiButtonListener();
 
-        mBlufiConnectBtn = findViewById(R.id.blufi_connect);
-        mBlufiConnectBtn.setOnClickListener(clickListener);
-        mBlufiConnectBtn.setOnLongClickListener(clickListener);
+        mContent.blufiConnect.setOnClickListener(clickListener);
+        mContent.blufiConnect.setOnLongClickListener(clickListener);
 
-        mBlufiDisconnectBtn = findViewById(R.id.blufi_disconnect);
-        mBlufiDisconnectBtn.setOnClickListener(clickListener);
-        mBlufiDisconnectBtn.setOnLongClickListener(clickListener);
-        mBlufiDisconnectBtn.setEnabled(false);
+        mContent.blufiDisconnect.setOnClickListener(clickListener);
+        mContent.blufiDisconnect.setOnLongClickListener(clickListener);
+        mContent.blufiDisconnect.setEnabled(false);
 
-        mBlufiSecurityBtn = findViewById(R.id.blufi_security);
-        mBlufiSecurityBtn.setOnClickListener(clickListener);
-        mBlufiSecurityBtn.setOnLongClickListener(clickListener);
-        mBlufiSecurityBtn.setEnabled(false);
+        mContent.blufiSecurity.setOnClickListener(clickListener);
+        mContent.blufiSecurity.setOnLongClickListener(clickListener);
+        mContent.blufiSecurity.setEnabled(false);
 
-        mBlufiVersionBtn = findViewById(R.id.blufi_version);
-        mBlufiVersionBtn.setOnClickListener(clickListener);
-        mBlufiVersionBtn.setOnLongClickListener(clickListener);
-        mBlufiVersionBtn.setEnabled(false);
+        mContent.blufiVersion.setOnClickListener(clickListener);
+        mContent.blufiVersion.setOnLongClickListener(clickListener);
+        mContent.blufiVersion.setEnabled(false);
 
-        mBlufiConfigureBtn = findViewById(R.id.blufi_configure);
-        mBlufiConfigureBtn.setOnClickListener(clickListener);
-        mBlufiConfigureBtn.setOnLongClickListener(clickListener);
-        mBlufiConfigureBtn.setEnabled(false);
+        mContent.blufiConfigure.setOnClickListener(clickListener);
+        mContent.blufiConfigure.setOnLongClickListener(clickListener);
+        mContent.blufiConfigure.setEnabled(false);
 
-        mBlufiDeviceScanBtn = findViewById(R.id.blufi_device_scan);
-        mBlufiDeviceScanBtn.setOnClickListener(clickListener);
-        mBlufiDeviceScanBtn.setOnLongClickListener(clickListener);
-        mBlufiDeviceScanBtn.setEnabled(false);
+        mContent.blufiDeviceScan.setOnClickListener(clickListener);
+        mContent.blufiDeviceScan.setOnLongClickListener(clickListener);
+        mContent.blufiDeviceScan.setEnabled(false);
 
-        mBlufiDeviceStatusBtn = findViewById(R.id.blufi_device_status);
-        mBlufiDeviceStatusBtn.setOnClickListener(clickListener);
-        mBlufiDeviceStatusBtn.setOnLongClickListener(clickListener);
-        mBlufiDeviceStatusBtn.setEnabled(false);
+        mContent.blufiDeviceStatus.setOnClickListener(clickListener);
+        mContent.blufiDeviceStatus.setOnLongClickListener(clickListener);
+        mContent.blufiDeviceStatus.setEnabled(false);
 
-        mBlufiCustomBtn = findViewById(R.id.blufi_custom);
-        mBlufiCustomBtn.setOnClickListener(clickListener);
-        mBlufiCustomBtn.setOnLongClickListener(clickListener);
-        mBlufiCustomBtn.setEnabled(false);
+        mContent.blufiCustom.setOnClickListener(clickListener);
+        mContent.blufiCustom.setOnLongClickListener(clickListener);
+        mContent.blufiCustom.setEnabled(false);
     }
 
     @Override
@@ -160,7 +146,7 @@ public class BlufiActivity extends BaseActivity {
             msg.isNotification = isNotificaiton;
             mMsgList.add(msg);
             mMsgAdapter.notifyItemInserted(mMsgList.size() - 1);
-            mMsgRecyclerView.scrollToPosition(mMsgList.size() - 1);
+            mContent.recyclerView.scrollToPosition(mMsgList.size() - 1);
         });
     }
 
@@ -168,7 +154,7 @@ public class BlufiActivity extends BaseActivity {
      * Try to connect device
      */
     private void connect() {
-        mBlufiConnectBtn.setEnabled(false);
+        mContent.blufiConnect.setEnabled(false);
 
         if (mBlufiClient != null) {
             mBlufiClient.close();
@@ -185,7 +171,7 @@ public class BlufiActivity extends BaseActivity {
      * Request device disconnect the connection.
      */
     private void disconnectGatt() {
-        mBlufiDisconnectBtn.setEnabled(false);
+        mContent.blufiDisconnect.setEnabled(false);
 
         if (mBlufiClient != null) {
             mBlufiClient.requestCloseConnection();
@@ -196,7 +182,7 @@ public class BlufiActivity extends BaseActivity {
      * If negotiate security success, the continue communication data will be encrypted.
      */
     private void negotiateSecurity() {
-        mBlufiSecurityBtn.setEnabled(false);
+        mContent.blufiSecurity.setEnabled(false);
 
         mBlufiClient.negotiateSecurity();
     }
@@ -215,7 +201,7 @@ public class BlufiActivity extends BaseActivity {
      * @param params configure params
      */
     private void configure(BlufiConfigureParams params) {
-        mBlufiConfigureBtn.setEnabled(false);
+        mContent.blufiConfigure.setEnabled(false);
 
         mBlufiClient.configure(params);
     }
@@ -224,7 +210,7 @@ public class BlufiActivity extends BaseActivity {
      * Request to get device current status
      */
     private void requestDeviceStatus() {
-        mBlufiDeviceStatusBtn.setEnabled(false);
+        mContent.blufiDeviceStatus.setEnabled(false);
 
         mBlufiClient.requestDeviceStatus();
     }
@@ -233,7 +219,7 @@ public class BlufiActivity extends BaseActivity {
      * Request to get device blufi version
      */
     private void requestDeviceVersion() {
-        mBlufiVersionBtn.setEnabled(false);
+        mContent.blufiVersion.setEnabled(false);
 
         mBlufiClient.requestDeviceVersion();
     }
@@ -242,7 +228,7 @@ public class BlufiActivity extends BaseActivity {
      * Request to get AP list that the device scanned
      */
     private void requestDeviceWifiScan() {
-        mBlufiDeviceScanBtn.setEnabled(false);
+        mContent.blufiDeviceScan.setEnabled(false);
 
         mBlufiClient.requestDeviceWifiScan();
     }
@@ -268,35 +254,35 @@ public class BlufiActivity extends BaseActivity {
     private void onGattConnected() {
         mConnected = true;
         runOnUiThread(() -> {
-            mBlufiConnectBtn.setEnabled(false);
+            mContent.blufiConnect.setEnabled(false);
 
-            mBlufiDisconnectBtn.setEnabled(true);
+            mContent.blufiDisconnect.setEnabled(true);
         });
     }
 
     private void onGattServiceCharacteristicDiscovered() {
         runOnUiThread(() -> {
-            mBlufiSecurityBtn.setEnabled(true);
-            mBlufiVersionBtn.setEnabled(true);
-            mBlufiConfigureBtn.setEnabled(true);
-            mBlufiDeviceStatusBtn.setEnabled(true);
-            mBlufiDeviceScanBtn.setEnabled(true);
-            mBlufiCustomBtn.setEnabled(true);
+            mContent.blufiSecurity.setEnabled(true);
+            mContent.blufiVersion.setEnabled(true);
+            mContent.blufiConfigure.setEnabled(true);
+            mContent.blufiDeviceStatus.setEnabled(true);
+            mContent.blufiDeviceScan.setEnabled(true);
+            mContent.blufiCustom.setEnabled(true);
         });
     }
 
     private void onGattDisconnected() {
         mConnected = false;
         runOnUiThread(() -> {
-            mBlufiConnectBtn.setEnabled(true);
+            mContent.blufiConnect.setEnabled(true);
 
-            mBlufiDisconnectBtn.setEnabled(false);
-            mBlufiSecurityBtn.setEnabled(false);
-            mBlufiVersionBtn.setEnabled(false);
-            mBlufiConfigureBtn.setEnabled(false);
-            mBlufiDeviceStatusBtn.setEnabled(false);
-            mBlufiDeviceScanBtn.setEnabled(false);
-            mBlufiCustomBtn.setEnabled(false);
+            mContent.blufiDisconnect.setEnabled(false);
+            mContent.blufiSecurity.setEnabled(false);
+            mContent.blufiVersion.setEnabled(false);
+            mContent.blufiConfigure.setEnabled(false);
+            mContent.blufiDeviceStatus.setEnabled(false);
+            mContent.blufiDeviceScan.setEnabled(false);
+            mContent.blufiCustom.setEnabled(false);
         });
     }
 
@@ -413,7 +399,7 @@ public class BlufiActivity extends BaseActivity {
                 updateMessage("Negotiate security failed， code=" + status, false);
             }
 
-            mBlufiSecurityBtn.setEnabled(mConnected);
+            mContent.blufiSecurity.setEnabled(mConnected);
         }
 
         @Override
@@ -424,7 +410,7 @@ public class BlufiActivity extends BaseActivity {
                 updateMessage("Post configure params failed, code=" + status, false);
             }
 
-            mBlufiConfigureBtn.setEnabled(mConnected);
+            mContent.blufiConfigure.setEnabled(mConnected);
         }
 
         @Override
@@ -436,7 +422,7 @@ public class BlufiActivity extends BaseActivity {
                 updateMessage("Device status response error, code=" + status, false);
             }
 
-            mBlufiDeviceStatusBtn.setEnabled(mConnected);
+            mContent.blufiDeviceStatus.setEnabled(mConnected);
         }
 
         @Override
@@ -452,7 +438,7 @@ public class BlufiActivity extends BaseActivity {
                 updateMessage("Device scan result error, code=" + status, false);
             }
 
-            mBlufiDeviceScanBtn.setEnabled(mConnected);
+            mContent.blufiDeviceScan.setEnabled(mConnected);
         }
 
         @Override
@@ -464,7 +450,7 @@ public class BlufiActivity extends BaseActivity {
                 updateMessage("Device version error, code=" + status, false);
             }
 
-            mBlufiVersionBtn.setEnabled(mConnected);
+            mContent.blufiVersion.setEnabled(mConnected);
         }
 
         @Override
@@ -499,21 +485,21 @@ public class BlufiActivity extends BaseActivity {
 
         @Override
         public void onClick(View v) {
-            if (v == mBlufiConnectBtn) {
+            if (v == mContent.blufiConnect) {
                 connect();
-            } else if (v == mBlufiDisconnectBtn) {
+            } else if (v == mContent.blufiDisconnect) {
                 disconnectGatt();
-            } else if (v == mBlufiSecurityBtn) {
+            } else if (v == mContent.blufiSecurity) {
                 negotiateSecurity();
-            } else if (v == mBlufiConfigureBtn) {
+            } else if (v == mContent.blufiConfigure) {
                 configureOptions();
-            } else if (v == mBlufiDeviceScanBtn) {
+            } else if (v == mContent.blufiDeviceScan) {
                 requestDeviceWifiScan();
-            } else if (v == mBlufiVersionBtn) {
+            } else if (v == mContent.blufiVersion) {
                 requestDeviceVersion();
-            } else if (v == mBlufiDeviceStatusBtn) {
+            } else if (v == mContent.blufiDeviceStatus) {
                 requestDeviceStatus();
-            } else if (v == mBlufiCustomBtn) {
+            } else if (v == mContent.blufiCustom) {
                 postCustomData();
             }
         }
@@ -525,21 +511,21 @@ public class BlufiActivity extends BaseActivity {
             }
 
             int msgRes = 0;
-            if (v == mBlufiConnectBtn) {
+            if (v == mContent.blufiConnect) {
                 msgRes = R.string.blufi_function_connect_msg;
-            } else if (v == mBlufiDisconnectBtn) {
+            } else if (v == mContent.blufiDisconnect) {
                 msgRes = R.string.blufi_function_disconnect_msg;
-            } else if (v == mBlufiSecurityBtn) {
+            } else if (v == mContent.blufiSecurity) {
                 msgRes = R.string.blufi_function_security_msg;
-            } else if (v == mBlufiConfigureBtn) {
+            } else if (v == mContent.blufiConfigure) {
                 msgRes = R.string.blufi_function_configure_msg;
-            } else if (v == mBlufiDeviceScanBtn) {
+            } else if (v == mContent.blufiDeviceScan) {
                 msgRes = R.string.blufi_function_device_scan_msg;
-            } else if (v == mBlufiVersionBtn) {
+            } else if (v == mContent.blufiVersion) {
                 msgRes = R.string.blufi_function_version_msg;
-            } else if (v == mBlufiDeviceStatusBtn) {
+            } else if (v == mContent.blufiDeviceStatus) {
                 msgRes = R.string.blufi_function_device_status_msg;
-            } else if (v == mBlufiCustomBtn) {
+            } else if (v == mContent.blufiCustom) {
                 msgRes = R.string.blufi_function_custom_msg;
             }
 
@@ -553,10 +539,10 @@ public class BlufiActivity extends BaseActivity {
     private static class MsgHolder extends RecyclerView.ViewHolder {
         TextView text1;
 
-        MsgHolder(View itemView) {
-            super(itemView);
+        MsgHolder(BlufiMessageItemBinding binding) {
+            super(binding.getRoot());
 
-            text1 = itemView.findViewById(android.R.id.text1);
+            text1 = binding.text1;
         }
     }
 
@@ -565,8 +551,12 @@ public class BlufiActivity extends BaseActivity {
         @NonNull
         @Override
         public MsgHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = getLayoutInflater().inflate(R.layout.blufi_message_item, parent, false);
-            return new MsgHolder(view);
+            BlufiMessageItemBinding binding = BlufiMessageItemBinding.inflate(
+                    getLayoutInflater(),
+                    parent,
+                    false
+            );
+            return new MsgHolder(binding);
         }
 
         @Override

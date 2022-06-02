@@ -2,12 +2,20 @@
 
 # Update Log
 
+## 1.6.2
+- Update blufi lib to `2.3.6`
+- Update `targetSdkVersion` to 32
+- Update gradle version
+- Use `viewBinding`
+- Improve ssid widget in station configure page
+
 ## v1.6.1
 - Change `targetSdkVersion` to 31
 - Update dependency libs version
 
 ## v1.6.0
 - New app icon
+- Fix bugs
 
 ## v1.5.3
 - Fix some bugs

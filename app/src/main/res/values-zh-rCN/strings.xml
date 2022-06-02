@@ -22,7 +22,7 @@
     <string name="blufi_function_configure">配网</string>
     <string name="blufi_function_configure_msg">配置设备模式</string>
     <string name="blufi_function_device_scan">扫描</string>
-    <string name="blufi_function_device_scan_msg">获取设备扫描到的 Wifi 列表</string>
+    <string name="blufi_function_device_scan_msg">获取设备扫描到的 Wi-Fi 列表</string>
     <string name="blufi_function_custom">自定义</string>
     <string name="blufi_function_custom_msg">发送自定义数据给设备</string>
     <string name="blufi_custom_dialog_title">输入自定义文本</string>
@@ -35,18 +35,18 @@
     <string name="configure_softap_password_error">SoftAP 密码过短</string>
     <string name="configure_softap_channel">SoftAP 信道</string>
     <string name="configure_softap_max_connection">SoftAP 最大连接数</string>
-    <string name="configure_station_sel_wifi">选择 Wifi</string>
-    <string name="configure_station_ssid">Wifi ssid</string>
-    <string name="configure_station_ssid_error">Wifi ssid 不能为空</string>
-    <string name="configure_station_wifi_5g_error">设备不支持 5G Wifi</string>
-    <string name="configure_station_wifi_5g_dialog_message">设备不支持 5G Wifi, 继续配网?</string>
+    <string name="configure_station_sel_wifi">选择 Wi-Fi</string>
+    <string name="configure_station_ssid">Wi-Fi ssid</string>
+    <string name="configure_station_ssid_error">Wi-Fi ssid 不能为空</string>
+    <string name="configure_station_wifi_5g_error">设备不支持 5G Wi-Fi</string>
+    <string name="configure_station_wifi_5g_dialog_message">设备不支持 5G Wi-Fi, 继续配网?</string>
     <string name="configure_station_wifi_5g_dialog_continue">继续</string>
     <string name="configure_station_wifi_5g_dialog_cancel">取消</string>
-    <string name="configure_station_password">Wifi 密码</string>
-    <string name="configure_station_wifi_scanning">正在扫描 Wifi…</string>
-    <string name="configure_station_wifi_scanning_nothing">没有扫到 WIFI</string>
-    <string name="configure_wifi_disable_msg">Wifi 不可用</string>
-    <string name="configure_wifi_no_selected_msg">没有选择 Wifi</string>
+    <string name="configure_station_password">Wi-Fi 密码</string>
+    <string name="configure_station_wifi_scanning">正在扫描 Wi-Fi…</string>
+    <string name="configure_station_wifi_scanning_nothing">没有扫到 Wi-Fi</string>
+    <string name="configure_wifi_disable_msg">Wi-Fi 不可用</string>
+    <string name="configure_wifi_no_selected_msg">没有选择 Wi-Fi</string>
 
     <string name="settings_title">设置</string>
     <string name="settings_category_blufi_key">setting_category_blufi</string>

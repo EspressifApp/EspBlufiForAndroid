@@ -13,19 +13,19 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
-import android.widget.EditText;
-import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.widget.Toolbar;
 
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BaseActivity;
 import com.espressif.espblufi.app.BlufiLog;
 import com.espressif.espblufi.constants.BlufiConstants;
+import com.espressif.espblufi.databinding.ConfigureOptionActivityBinding;
+import com.espressif.espblufi.databinding.ConfigureOptionSelectFormBinding;
+import com.espressif.espblufi.databinding.ConfigureOptionSoftapFormBinding;
+import com.espressif.espblufi.databinding.ConfigureOptionStationFormBinding;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -65,22 +65,9 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
 
     private BlufiLog mLog = new BlufiLog(getClass());
 
-    private Spinner mDeviceModeSp;
-
-    private View mSoftAPForm;
-    private Spinner mSoftapSecuritSP;
-    private View mSoftAPPasswordForm;
-    private EditText mSoftAPSsidET;
-    private EditText mSoftAPPAsswordET;
-    private Spinner mSoftAPChannelSp;
-    private Spinner mSoftAPMaxConnectionSp;
-
     private WifiManager mWifiManager;
     private List<ScanResult> mWifiList;
     private boolean mScanning = false;
-    private View mStationForm;
-    private AutoCompleteTextView mStationSsidET;
-    private EditText mStationPasswordET;
 
     private HashMap<String, String> mApMap;
     private List<String> mAutoCompleteSSIDs;
@@ -88,42 +75,40 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
 
     private SharedPreferences mApPref;
 
+    private ConfigureOptionActivityBinding mBinding;
+    private ConfigureOptionSelectFormBinding mSelectForm;
+    private ConfigureOptionSoftapFormBinding mSoftAPForm;
+    private ConfigureOptionStationFormBinding mStationForm;
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.configure_option_activity);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        mBinding = ConfigureOptionActivityBinding.inflate(getLayoutInflater());
+        setContentView(mBinding.getRoot());
+        setSupportActionBar(mBinding.toolbar);
         setHomeAsUpEnable(true);
 
         mWifiManager = (WifiManager) getApplicationContext().getSystemService(WIFI_SERVICE);
 
         mApPref = getSharedPreferences(PREF_AP, MODE_PRIVATE);
 
-        mDeviceModeSp = findViewById(R.id.device_mode_sp);
-        mDeviceModeSp.setOnItemSelectedListener(this);
-        mDeviceModeSp.setSelection(0);
+        mSelectForm = mBinding.optionContent.selectForm;
+        mSoftAPForm = mBinding.optionContent.softapForm;
+        mStationForm = mBinding.optionContent.stationForm;
 
-        mSoftAPForm = findViewById(R.id.softap_security_form);
-        mSoftapSecuritSP = findViewById(R.id.softap_security_sp);
-        mSoftapSecuritSP.setOnItemSelectedListener(this);
-        mSoftAPPasswordForm = findViewById(R.id.softap_password_form);
-        mSoftAPSsidET = findViewById(R.id.softap_ssid);
-        mSoftAPPAsswordET = findViewById(R.id.softap_password);
-        mSoftAPChannelSp = findViewById(R.id.softap_channel);
-        mSoftAPMaxConnectionSp = findViewById(R.id.softap_max_connection);
+        mSelectForm.deviceModeSp.setOnItemSelectedListener(this);
+        mSelectForm.deviceModeSp.setSelection(0);
+
+        mSoftAPForm.softapSecuritySp.setOnItemSelectedListener(this);
 
         mApMap = new HashMap<>();
         mAutoCompleteSSIDs = new LinkedList<>();
         loadAPs();
         mWifiList = new ArrayList<>();
-        mStationForm = findViewById(R.id.station_wifi_form);
-        mStationSsidET = findViewById(R.id.station_ssid);
-        mStationPasswordET = findViewById(R.id.station_wifi_password);
-        findViewById(R.id.station_wifi_scan).setOnClickListener(v -> scanWifi());
+        mStationForm.stationWifiSsidForm.setEndIconOnClickListener(v -> scanWifi());
         mAutoCompleteSSIDAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, mAutoCompleteSSIDs);
-        mStationSsidET.setAdapter(mAutoCompleteSSIDAdapter);
-        mStationSsidET.addTextChangedListener(new TextWatcher() {
+        mStationForm.stationSsid.setAdapter(mAutoCompleteSSIDAdapter);
+        mStationForm.stationSsid.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
             }
@@ -135,15 +120,15 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
             @Override
             public void afterTextChanged(Editable s) {
                 String pwd = mApMap.get(s.toString());
-                mStationPasswordET.setText(pwd);
-                mStationSsidET.setTag(null);
+                mStationForm.stationWifiPassword.setText(pwd);
+                mStationForm.stationSsid.setTag(null);
             }
         });
-        mStationSsidET.setText(getConnectionSSID());
+        mStationForm.stationSsid.setText(getConnectionSSID());
         WifiInfo info = mWifiManager.getConnectionInfo();
         if (info != null) {
             byte[] ssidBytes = getSSIDRawData(info);
-            mStationSsidET.setTag(ssidBytes);
+            mStationForm.stationSsid.setTag(ssidBytes);
         }
 
         findViewById(R.id.confirm).setOnClickListener(v -> configure());
@@ -234,27 +219,27 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-        if (parent == mDeviceModeSp) {
+        if (parent == mSelectForm.deviceModeSp) {
             switch (position) {
                 case OP_MODE_POS_STA:
-                    mSoftAPForm.setVisibility(View.GONE);
-                    mStationForm.setVisibility(View.VISIBLE);
+                    mSoftAPForm.softapOptions.setVisibility(View.GONE);
+                    mStationForm.stationOptions.setVisibility(View.VISIBLE);
                     break;
                 case OP_MODE_POS_SOFTAP:
-                    mSoftAPForm.setVisibility(View.VISIBLE);
-                    mStationForm.setVisibility(View.GONE);
+                    mSoftAPForm.softapOptions.setVisibility(View.VISIBLE);
+                    mStationForm.stationOptions.setVisibility(View.GONE);
                     break;
                 case OP_MODE_POS_STASOFTAP:
-                    mSoftAPForm.setVisibility(View.VISIBLE);
-                    mStationForm.setVisibility(View.VISIBLE);
+                    mSoftAPForm.softapOptions.setVisibility(View.VISIBLE);
+                    mStationForm.stationOptions.setVisibility(View.VISIBLE);
                     break;
             }
-        } else if (parent == mSoftapSecuritSP) {
+        } else if (parent == mSoftAPForm.softapSecuritySp) {
             if (position == 0) {
                 // OPEN
-                mSoftAPPasswordForm.setVisibility(View.GONE);
+                mSoftAPForm.softapPasswordForm.setVisibility(View.GONE);
             } else {
-                mSoftAPPasswordForm.setVisibility(View.VISIBLE);
+                mSoftAPForm.softapPasswordForm.setVisibility(View.VISIBLE);
             }
         }
     }
@@ -344,7 +329,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
         }
 
         int checkedItem = -1;
-        String inputSsid = mStationSsidET.getText().toString();
+        String inputSsid = mStationForm.stationSsid.getText().toString();
         final String[] wifiSSIDs = new String[count];
         for (int i = 0; i < count; i++) {
             ScanResult sr = mWifiList.get(i);
@@ -355,10 +340,10 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
         }
         new AlertDialog.Builder(this)
                 .setSingleChoiceItems(wifiSSIDs, checkedItem, (dialog, which) -> {
-                    mStationSsidET.setText(wifiSSIDs[which]);
+                    mStationForm.stationSsid.setText(wifiSSIDs[which]);
                     ScanResult scanResult = mWifiList.get(which);
                     byte[] ssidBytes = getSSIDRawData(scanResult);
-                    mStationSsidET.setTag(ssidBytes);
+                    mStationForm.stationSsid.setTag(ssidBytes);
                     dialog.dismiss();
                 })
                 .show();
@@ -366,7 +351,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
 
     private BlufiConfigureParams checkInfo() {
         BlufiConfigureParams params = new BlufiConfigureParams();
-        int deviceMode = OP_MODE_VALUES[mDeviceModeSp.getSelectedItemPosition()];
+        int deviceMode = OP_MODE_VALUES[mSelectForm.deviceModeSp.getSelectedItemPosition()];
         params.setOpMode(deviceMode);
         switch (deviceMode) {
             case BlufiParameter.OP_MODE_NULL:
@@ -395,14 +380,14 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
     }
 
     private boolean checkSta(BlufiConfigureParams params) {
-        String ssid = mStationSsidET.getText().toString();
+        String ssid = mStationForm.stationSsid.getText().toString();
         if (TextUtils.isEmpty(ssid)) {
-            mStationSsidET.setError(getString(R.string.configure_station_ssid_error));
+            mStationForm.stationSsid.setError(getString(R.string.configure_station_ssid_error));
             return false;
         }
-        byte[] ssidBytes = (byte[]) mStationSsidET.getTag();
+        byte[] ssidBytes = (byte[]) mStationForm.stationSsid.getTag();
         params.setStaSSIDBytes(ssidBytes != null ? ssidBytes : ssid.getBytes());
-        String password = mStationPasswordET.getText().toString();
+        String password = mStationForm.stationWifiPassword.getText().toString();
         params.setStaPassword(password);
 
         int freq = -1;
@@ -418,7 +403,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
             }
         }
         if (is5GHz(freq)) {
-            mStationSsidET.setError(getString(R.string.configure_station_wifi_5g_error));
+            mStationForm.stationSsid.setError(getString(R.string.configure_station_wifi_5g_error));
             new AlertDialog.Builder(this)
                     .setMessage(R.string.configure_station_wifi_5g_dialog_message)
                     .setPositiveButton(R.string.configure_station_wifi_5g_dialog_continue, (dialog, which) -> {
@@ -433,16 +418,16 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
     }
 
     public boolean checkSoftAP(BlufiConfigureParams params) {
-        String ssid = mSoftAPSsidET.getText().toString();
+        String ssid = mSoftAPForm.softapSsid.getText().toString();
         params.setSoftAPSSID(ssid);
-        String password = mSoftAPPAsswordET.getText().toString();
+        String password = mSoftAPForm.softapPassword.getText().toString();
         params.setSoftAPPAssword(password);
-        int channel = mSoftAPChannelSp.getSelectedItemPosition();
+        int channel = mSoftAPForm.softapChannel.getSelectedItemPosition();
         params.setSoftAPChannel(channel);
-        int maxConnection = mSoftAPMaxConnectionSp.getSelectedItemPosition();
+        int maxConnection = mSoftAPForm.softapMaxConnection.getSelectedItemPosition();
         params.setSoftAPMaxConnection(maxConnection);
 
-        int security = SOFTAP_SECURITY_VALUES[mSoftapSecuritSP.getSelectedItemPosition()];
+        int security = SOFTAP_SECURITY_VALUES[mSoftAPForm.softapSecuritySp.getSelectedItemPosition()];
         params.setSoftAPSecurity(security);
         switch (security) {
             case BlufiParameter.SOFTAP_SECURITY_OPEN:
@@ -452,7 +437,7 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
             case BlufiParameter.SOFTAP_SECURITY_WPA2:
             case BlufiParameter.SOFTAP_SECURITY_WPA_WPA2:
                 if (TextUtils.isEmpty(password) || password.length() < 8) {
-                    mSoftAPPAsswordET.setError(getString(R.string.configure_softap_password_error));
+                    mSoftAPForm.softapPassword.setError(getString(R.string.configure_softap_password_error));
                     return false;
                 }
 
@@ -463,9 +448,9 @@ public class ConfigureOptionsActivity extends BaseActivity implements AdapterVie
     }
 
     private void configure() {
-        mSoftAPSsidET.setError(null);
-        mSoftAPPAsswordET.setError(null);
-        mStationSsidET.setError(null);
+        mSoftAPForm.softapSsid.setError(null);
+        mSoftAPForm.softapPassword.setError(null);
+        mStationForm.stationSsid.setError(null);
 
         final BlufiConfigureParams params = checkInfo();
         if (params == null) {

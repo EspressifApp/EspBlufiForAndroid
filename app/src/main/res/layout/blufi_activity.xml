@@ -20,5 +20,7 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <include layout="@layout/blufi_content" />
+    <include
+        android:id="@+id/content"
+        layout="@layout/blufi_content" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

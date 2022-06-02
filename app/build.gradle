@@ -1,14 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 31
+    compileSdk 32
 
     defaultConfig {
         applicationId "com.espressif.espblufi"
-        minSdkVersion 21
-        targetSdkVersion 31
-        versionCode 27
-        versionName "1.6.1"
+        minSdk 21
+        targetSdk 32
+        versionCode 28
+        versionName "1.6.2"
     }
 
     buildTypes {
@@ -21,12 +21,15 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
+    buildFeatures {
+        viewBinding true
+    }
 }
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
 
-    implementation 'com.google.android.material:material:1.5.0'
+    implementation 'com.google.android.material:material:1.6.1'
     implementation 'androidx.appcompat:appcompat:1.4.1'
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation 'androidx.preference:preference:1.2.0'
@@ -34,5 +37,5 @@ dependencies {
     implementation 'io.reactivex.rxjava3:rxjava:3.1.4'
     implementation 'io.reactivex.rxjava3:rxandroid:3.0.0'
 
-    implementation 'com.github.EspressifApp:lib-blufi-android:2.3.5'
+    implementation 'com.github.EspressifApp:lib-blufi-android:2.3.6'
 }

@@ -20,5 +20,7 @@
 
     </com.google.android.material.appbar.AppBarLayout>
 
-    <include layout="@layout/configure_option_content" />
+    <include
+        android:id="@+id/optionContent"
+        layout="@layout/configure_option_content" />
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

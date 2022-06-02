@@ -2,12 +2,20 @@
 
 # 更新日志
 
+## 1.6.2
+- 更新 blufi 库版本为 `2.3.6`
+- 更新 `targetSdkVersion` 为 32
+- 更新 gradle 版本
+- 使用 `viewBinding`
+- 优化 Station 配网 ssid 控件
+
 ## 1.6.1
 - 修改 `targetSdkVersion` 为 31
 - 升级依赖库版本
 
 ## v1.6.0
-- 新的应用图标
+- 更新 App 图标
+- 修复 BUG
 
 ## 1.5.3
 - 修复 BUG

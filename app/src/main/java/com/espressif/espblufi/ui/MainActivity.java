@@ -21,22 +21,21 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.location.LocationManagerCompat;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
 import com.espressif.espblufi.R;
 import com.espressif.espblufi.app.BlufiApp;
 import com.espressif.espblufi.app.BlufiLog;
 import com.espressif.espblufi.constants.BlufiConstants;
 import com.espressif.espblufi.constants.SettingsConstants;
+import com.espressif.espblufi.databinding.MainActivityBinding;
+import com.espressif.espblufi.databinding.MainBleItemBinding;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,9 +58,8 @@ public class MainActivity extends AppCompatActivity {
 
     private final BlufiLog mLog = new BlufiLog(getClass());
 
-    private SwipeRefreshLayout mRefreshLayout;
+    private MainActivityBinding mBinding;
 
-    private RecyclerView mRecyclerView;
     private List<ScanResult> mBleList;
     private BleAdapter mBleAdapter;
 
@@ -71,38 +69,37 @@ public class MainActivity extends AppCompatActivity {
     private volatile long mScanStartTime;
 
     private ExecutorService mThreadPool;
-    private Future mUpdateFuture;
+    private Future<Boolean> mUpdateFuture;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.main_activity);
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        mBinding = MainActivityBinding.inflate(getLayoutInflater());
+        setContentView(mBinding.getRoot());
+        setSupportActionBar(mBinding.toolbar);
 
         mThreadPool = Executors.newSingleThreadExecutor();
 
-        mRefreshLayout = findViewById(R.id.refresh_layout);
-        mRefreshLayout.setColorSchemeResources(R.color.colorAccent);
-        mRefreshLayout.setOnRefreshListener(this::scan);
 
-        mRecyclerView = findViewById(R.id.recycler_view);
+        mBinding.refreshLayout.setColorSchemeResources(R.color.colorAccent);
+        mBinding.refreshLayout.setOnRefreshListener(this::scan);
+
         mBleList = new LinkedList<>();
         mBleAdapter = new BleAdapter();
-        mRecyclerView.setAdapter(mBleAdapter);
+        mBinding.recyclerView.setAdapter(mBleAdapter);
 
         mDeviceMap = new HashMap<>();
         mScanCallback = new ScanCallback();
 
         List<String> permissionList = new ArrayList<>();
         permissionList.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            permissionList.add(Manifest.permission.BLUETOOTH_SCAN);
+            permissionList.add(Manifest.permission.BLUETOOTH_CONNECT);
+        }
         ActivityCompat.requestPermissions(
                 this,
-                new String[]{
-                        Manifest.permission.ACCESS_FINE_LOCATION,
-                        Manifest.permission.BLUETOOTH_SCAN,
-                        Manifest.permission.BLUETOOTH_CONNECT
-                },
+                permissionList.toArray(new String[0]),
                 REQUEST_PERMISSION
         );
     }
@@ -125,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
 
             if (permission.equals(Manifest.permission.ACCESS_FINE_LOCATION)) {
                 if (grant == PackageManager.PERMISSION_GRANTED) {
-                    mRefreshLayout.setRefreshing(true);
+                    mBinding.refreshLayout.setRefreshing(true);
                     scan();
                 }
             }
@@ -135,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQUEST_BLUFI) {
-            mRefreshLayout.setRefreshing(true);
+            mBinding.refreshLayout.setRefreshing(true);
             scan();
             return;
         }
@@ -164,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
         BluetoothLeScanner scanner = adapter.getBluetoothLeScanner();
         if (!adapter.isEnabled() || scanner == null) {
             Toast.makeText(this, R.string.main_bt_disable_msg, Toast.LENGTH_SHORT).show();
-            mRefreshLayout.setRefreshing(false);
+            mBinding.refreshLayout.setRefreshing(false);
             return;
         }
 
@@ -174,7 +171,7 @@ public class MainActivity extends AppCompatActivity {
             boolean locationEnable = locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager);
             if (!locationEnable) {
                 Toast.makeText(this, R.string.main_location_disable_msg, Toast.LENGTH_SHORT).show();
-                mRefreshLayout.setRefreshing(false);
+                mBinding.refreshLayout.setRefreshing(false);
                 return;
             }
         }
@@ -212,6 +209,7 @@ public class MainActivity extends AppCompatActivity {
             }
             onIntervalScanUpdate(true);
             mLog.d("Scan ble thread is interrupted");
+            return true;
         });
     }
 
@@ -240,7 +238,7 @@ public class MainActivity extends AppCompatActivity {
             mBleAdapter.notifyDataSetChanged();
 
             if (over) {
-                mRefreshLayout.setRefreshing(false);
+                mBinding.refreshLayout.setRefreshing(false);
             }
         });
     }
@@ -257,16 +255,13 @@ public class MainActivity extends AppCompatActivity {
 
     private class BleHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         ScanResult scanResult;
-        TextView text1;
-        TextView text2;
+        MainBleItemBinding binding;
 
-        BleHolder(View itemView) {
-            super(itemView);
+        BleHolder(MainBleItemBinding binding) {
+            super(binding.getRoot());
 
-            text1 = itemView.findViewById(android.R.id.text1);
-            text2 = itemView.findViewById(android.R.id.text2);
-
-            itemView.setOnClickListener(this);
+            this.binding = binding;
+            binding.itemContent.setOnClickListener(this);
         }
 
         @Override
@@ -312,8 +307,8 @@ public class MainActivity extends AppCompatActivity {
         @NonNull
         @Override
         public BleHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = getLayoutInflater().inflate(R.layout.main_ble_item, parent, false);
-            return new BleHolder(view);
+            MainBleItemBinding binding = MainBleItemBinding.inflate(getLayoutInflater(), parent, false);
+            return new BleHolder(binding);
         }
 
         @Override
@@ -323,14 +318,14 @@ public class MainActivity extends AppCompatActivity {
 
             BluetoothDevice device = scanResult.getDevice();
             String name = device.getName() == null ? getString(R.string.string_unknown) : device.getName();
-            holder.text1.setText(name);
+            holder.binding.text1.setText(name);
 
             SpannableStringBuilder info = new SpannableStringBuilder();
             info.append("Mac:").append(device.getAddress())
                     .append(" RSSI:").append(String.valueOf(scanResult.getRssi()));
             info.setSpan(new ForegroundColorSpan(0xFF9E9E9E), 0, 21, Spannable.SPAN_EXCLUSIVE_INCLUSIVE);
             info.setSpan(new ForegroundColorSpan(0xFF8D6E63), 21, info.length(), Spannable.SPAN_EXCLUSIVE_INCLUSIVE);
-            holder.text2.setText(info);
+            holder.binding.text2.setText(info);
         }
 
         @Override
