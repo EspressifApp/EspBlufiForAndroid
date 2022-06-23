@@ -168,7 +168,7 @@ class BlufiClientImpl implements BlufiParameter {
         mDevice = null;
     }
 
-    void setWriteTimeout(long timeout) {
+    void setGattWriteTimeout(long timeout) {
         mWriteTimeout = timeout;
     }
 
@@ -310,6 +310,9 @@ class BlufiClientImpl implements BlufiParameter {
         Boolean result;
         if (mWriteTimeout > 0) {
             result = mWriteResultQueue.poll(mWriteTimeout, TimeUnit.MILLISECONDS);
+            if (result == null) {
+                onError(BlufiCallback.CODE_GATT_WRITE_TIMEOUT);
+            }
         } else {
             result = mWriteResultQueue.take();
         }

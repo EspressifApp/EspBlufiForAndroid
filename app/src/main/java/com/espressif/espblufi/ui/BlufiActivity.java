@@ -164,6 +164,7 @@ public class BlufiActivity extends BaseActivity {
         mBlufiClient = new BlufiClient(getApplicationContext(), mDevice);
         mBlufiClient.setGattCallback(new GattCallback());
         mBlufiClient.setBlufiCallback(new BlufiCallbackMain());
+        mBlufiClient.setGattWriteTimeout(BlufiConstants.GATT_WRITE_TIMEOUT);
         mBlufiClient.connect();
     }
 
@@ -358,8 +359,13 @@ public class BlufiActivity extends BaseActivity {
 
     private class BlufiCallbackMain extends BlufiCallback {
         @Override
-        public void onGattPrepared(BlufiClient client, BluetoothGatt gatt, BluetoothGattService service,
-                                   BluetoothGattCharacteristic writeChar, BluetoothGattCharacteristic notifyChar) {
+        public void onGattPrepared(
+                BlufiClient client,
+                BluetoothGatt gatt,
+                BluetoothGattService service,
+                BluetoothGattCharacteristic writeChar,
+                BluetoothGattCharacteristic notifyChar
+        ) {
             if (service == null) {
                 mLog.w("Discover service failed");
                 gatt.disconnect();
@@ -477,6 +483,11 @@ public class BlufiActivity extends BaseActivity {
         @Override
         public void onError(BlufiClient client, int errCode) {
             updateMessage(String.format(Locale.ENGLISH, "Receive error code %d", errCode), false);
+            if (errCode == CODE_GATT_WRITE_TIMEOUT) {
+                updateMessage("Gatt write timeout", false);
+                client.close();
+                onGattDisconnected();
+            }
         }
     }
 

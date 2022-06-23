@@ -55,8 +55,15 @@ public class BlufiClient {
         mImpl.setPostPackageLengthLimit(lengthLimit);
     }
 
-    public void setWriteTimeout(long timeout) {
-        mImpl.setWriteTimeout(timeout);
+    /**
+     * Set gatt write timeout.
+     * If timeout, {@link BlufiCallback#onError(BlufiClient, int)} will be invoked,
+     * the errCode is {@link BlufiCallback#CODE_GATT_WRITE_TIMEOUT}
+     *
+     * @param timeout in milliseconds
+     */
+    public void setGattWriteTimeout(long timeout) {
+        mImpl.setGattWriteTimeout(timeout);
     }
 
     /**

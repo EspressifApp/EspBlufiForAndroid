@@ -28,6 +28,8 @@ public abstract class BlufiCallback {
     public static final int CODE_CONF_ERR_POST_STA = -3002;
     public static final int CODE_CONF_ERR_POST_SOFTAP = -3003;
 
+    public static final int CODE_GATT_WRITE_TIMEOUT = -4000;
+
     /**
      * Callback invoked after BluetoothGattCallback receive onServicesDiscovered
      * User can post Blufi packet now.
