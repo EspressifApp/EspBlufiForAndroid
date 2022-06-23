@@ -2,7 +2,7 @@
 This is a demo app to control the ESP device which run [BluFi](https://github.com/espressif/esp-idf/tree/master/examples/bluetooth/blufi)
 
 ## Lib Source Code
-- See [lib-blufi-android](https://github.com/EspressifApp/lib-blufi-android)
+- See [lib-blufi](lib-blufi)
 
 ## How to Import
 - Add this in your root `build.gradle` at the end of repositories:

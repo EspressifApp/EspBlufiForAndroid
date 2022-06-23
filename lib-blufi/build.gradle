@@ -1,0 +1,30 @@
+plugins {
+    id 'com.android.library'
+}
+
+def libVersion = "2.3.6"
+
+android {
+    compileSdkVersion 32
+
+    defaultConfig {
+        minSdkVersion 18
+        targetSdkVersion 32
+
+        buildConfigField "String", "VERSION_NAME", "\"$libVersion\""
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+}
