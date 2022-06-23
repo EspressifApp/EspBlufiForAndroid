@@ -2,6 +2,10 @@
 
 # Update Log
 
+## 1.6.3
+- Set gatt write timeout as 5 seconds.
+- Update blufi lib to `2.3.7`
+
 ## 1.6.2
 - Update blufi lib to `2.3.6`
 - Update `targetSdkVersion` to 32
