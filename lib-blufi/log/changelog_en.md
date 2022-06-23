@@ -1,4 +1,11 @@
 # Change Log
+[中文](changelog_zh.md)
+
+## 2.3.7
+- Add gatt write timeout interface in `BlufiClient`
+  ```java
+  public void setGattWriteTimeout(long timeout)
+  ```
 
 ## 2.3.6
 - Update `targetSdkVersion` to 32
@@ -6,7 +13,7 @@
 - Change `sourceCompatibility` to `JavaVersion.VERSION_1_8`
 - Add interface in `BlufiClient`
   ```java
-  void printDebugLog(boolean enable)
+  public void printDebugLog(boolean enable)
   ```
 
 ## 2.3.5

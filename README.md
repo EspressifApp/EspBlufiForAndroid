@@ -16,7 +16,7 @@ This is a demo app to control the ESP device which run [BluFi](https://github.co
    ```
 - And add a dependency code to your app module's `build.gradle` file.
   ```
-  implementation 'com.github.EspressifApp:lib-blufi-android:2.3.6'
+  implementation 'com.github.EspressifApp:lib-blufi-android:2.3.7'
   ```
 
 ## ESPRSSIF MIT License
@@ -29,4 +29,5 @@ This is a demo app to control the ESP device which run [BluFi](https://github.co
 - See [Releases](https://github.com/EspressifApp/EspBlufiForAndroid/releases)
 
 ## Update Log
-- See [Log](log/updatelog-en.md)
+- App [Log](log/updatelog-en.md)
+- Lib [Log](lib-blufi/log/changelog_en.md)

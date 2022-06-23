@@ -2,7 +2,7 @@ plugins {
     id 'com.android.library'
 }
 
-def libVersion = "2.3.6"
+def libVersion = "2.3.7"
 
 android {
     compileSdkVersion 32
