@@ -4,6 +4,8 @@ import java.io.Serializable;
 import java.util.Locale;
 
 public class BlufiConfigureParams implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     private int mOpMode;
 
     private String mStaBSSID;

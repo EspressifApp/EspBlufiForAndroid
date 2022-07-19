@@ -20,7 +20,7 @@ This is a demo app to control the ESP device which run [BluFi](https://github.co
   ```
 
 ## ESPRSSIF MIT License
-- See [License](ESPRESSIF_MIT_LICENSE)
+- See [License](LICENSE)
 
 ## Development Documents
 - See [Doc](doc/Introduction_to_the_EspBlufi_API_Interface_for_Android__en.md)
