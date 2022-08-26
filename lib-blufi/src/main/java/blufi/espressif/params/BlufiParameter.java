@@ -22,6 +22,16 @@ public interface BlufiParameter {
     int SOFTAP_SECURITY_WPA2 = 0x03;
     int SOFTAP_SECURITY_WPA_WPA2 = 0x04;
 
+    int STA_CONN_SUCCESS = 0x00;
+    int STA_CONN_FAIL = 0x01;
+    int STA_CONN_CONNECTING = 0X02;
+    int STA_CONN_NO_IP = 0x03;
+
+    int WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT = 15;
+    int WIFI_REASON_NO_AP_FOUND = 201;
+    int WIFI_REASON_HANDSHAKE_TIMEOUT = 204;
+    int WIFI_REASON_CONNECTION_FAIL = 205;
+
     final class Type {
         public final static class Ctrl {
             public static final int PACKAGE_VALUE = 0x00;
@@ -61,6 +71,9 @@ public interface BlufiParameter {
             public static final int SUBTYPE_WIFI_LIST = 0x11;
             public static final int SUBTYPE_ERROR = 0x12;
             public static final int SUBTYPE_CUSTOM_DATA = 0x13;
+            public static final int SUBTYPE_WIFI_STA_MAX_CONN_RETRY = 0x14;
+            public static final int SUBTYPE_WIFI_STA_CONN_END_REASON = 0x15;
+            public static final int SUBTYPE_WIFI_STA_CONN_RSSI = 0x16;
         }
     }
 }

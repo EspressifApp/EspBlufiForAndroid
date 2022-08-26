@@ -653,6 +653,19 @@ class BlufiClientImpl implements BlufiParameter {
                 String softapSSID = new String(data);
                 response.setSoftAPSSID(softapSSID);
                 break;
+            case BlufiParameter.Type.Data.SUBTYPE_WIFI_STA_MAX_CONN_RETRY:
+                int maxRetry = toInt(data[0]);
+                response.setMaxRetry(maxRetry);
+                break;
+            case BlufiParameter.Type.Data.SUBTYPE_WIFI_STA_CONN_END_REASON:
+                int endReason = toInt(data[0]);
+                response.setEndReason(endReason);
+                break;
+            case BlufiParameter.Type.Data.SUBTYPE_WIFI_STA_CONN_RSSI:
+                int rssi = data[0];
+                response.setRssi(rssi);
+                break;
+
         }
     }
 

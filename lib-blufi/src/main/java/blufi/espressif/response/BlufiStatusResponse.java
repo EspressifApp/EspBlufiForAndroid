@@ -17,6 +17,53 @@ public class BlufiStatusResponse {
     private String mStaSSID = null;
     private String mStaPassword = null;
 
+    final private int mConnectionRssiLimit = -60;
+
+    private int mConnectionMaxRetry = -1;
+    private int mConnectionEndReason = -1;
+    private int mConnectionRssi = -128;
+
+    private boolean isReasonValid(int reason) {
+        return ((reason >= 0 && reason <= 24) || (reason == 53) || (reason >= 200 && reason <= 207));
+    }
+
+    private boolean isRssiValid(int rssi) {
+        /* define rssi -128 as N/A */
+        return (rssi > -128 && rssi <= 127);
+    }
+
+    private String getEndInfo() {
+        StringBuilder msg = new StringBuilder();
+
+        msg.append("Reason code: ").append(isReasonValid(mConnectionEndReason) ? mConnectionEndReason : "N/A").append(", ");
+        msg.append("Rssi: ").append(isRssiValid(mConnectionRssi) ? mConnectionRssi : "N/A").append("\n");
+
+        if (mConnectionEndReason == BlufiParameter.WIFI_REASON_NO_AP_FOUND) {
+            msg.append("NO AP FOUND").append("\n");
+        } else if (mConnectionEndReason == BlufiParameter.WIFI_REASON_CONNECTION_FAIL) {
+            msg.append("AP IN BLACKLIST, PLEASE RETRY").append("\n");
+        } else if (isRssiValid(mConnectionRssi)){
+            if (mConnectionRssi < mConnectionRssiLimit) {
+                msg.append("RSSI IS TOO LOW").append("\n");
+            } else if (mConnectionEndReason == BlufiParameter.WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT || mConnectionEndReason == BlufiParameter.WIFI_REASON_HANDSHAKE_TIMEOUT) {
+                msg.append("WRONG PASSWORD").append("\n");
+            }
+        }
+
+        return msg.toString();
+    }
+
+    private String getConnectingInfo() {
+        StringBuilder msg = new StringBuilder();
+        msg.append("Max Retry is ");
+        if (mConnectionMaxRetry == -1) {
+            msg.append("N/A\n");
+        } else {
+            msg.append(mConnectionMaxRetry).append("\n");
+        }
+        return msg.toString();
+    }
+
     public int getOpMode() {
         return mOpMode;
     }
@@ -109,6 +156,18 @@ public class BlufiStatusResponse {
         mStaPassword = password;
     }
 
+    public void setMaxRetry(int maxRetry) {
+        mConnectionMaxRetry = maxRetry;
+    }
+
+    public void setEndReason(int reason) {
+        mConnectionEndReason = reason;
+    }
+
+    public void setRssi(int rssi) {
+        mConnectionRssi = rssi;
+    }
+
     public String generateValidInfo() {
         StringBuilder info = new StringBuilder();
         info.append("OpMode: ");
@@ -132,11 +191,16 @@ public class BlufiStatusResponse {
             case BlufiParameter.OP_MODE_STA:
             case BlufiParameter.OP_MODE_STASOFTAP:
                 if (isStaConnectWifi()) {
-                    info.append("Station connect Wi-Fi now");
+                    info.append("Station connect Wi-Fi now, got IP\n");
+                } else if (getStaConnectionStatus() == BlufiParameter.STA_CONN_NO_IP) {
+                    info.append("Station connect Wi-Fi now, no IP found\n");
+                } else if (getStaConnectionStatus() == BlufiParameter.STA_CONN_FAIL) {
+                    info.append("Station disconnect Wi-Fi now\n");
+                    info.append(getEndInfo());
                 } else {
-                    info.append("Station disconnect Wi-Fi now");
+                    info.append("Station is connecting WiFi now\n");
+                    info.append(getConnectingInfo());
                 }
-                info.append('\n');
                 if (mStaBSSID != null) {
                     info.append("Station connect Wi-Fi bssid: ").append(mStaBSSID).append('\n');
                 }

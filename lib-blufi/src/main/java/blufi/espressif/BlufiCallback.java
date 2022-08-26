@@ -30,6 +30,8 @@ public abstract class BlufiCallback {
 
     public static final int CODE_GATT_WRITE_TIMEOUT = -4000;
 
+    public static final int CODE_WIFI_SCAN_FAIL = 11;
+
     /**
      * Callback invoked after BluetoothGattCallback receive onServicesDiscovered
      * User can post Blufi packet now.
