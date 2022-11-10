@@ -487,6 +487,9 @@ public class BlufiActivity extends BaseActivity {
                 updateMessage("Gatt write timeout", false);
                 client.close();
                 onGattDisconnected();
+            } else if (errCode == CODE_WIFI_SCAN_FAIL) {
+                updateMessage("Scan failed, please retry later", false);
+                mContent.blufiDeviceScan.setEnabled(true);
             }
         }
     }
