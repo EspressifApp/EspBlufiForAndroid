@@ -71,9 +71,9 @@ public interface BlufiParameter {
             public static final int SUBTYPE_WIFI_LIST = 0x11;
             public static final int SUBTYPE_ERROR = 0x12;
             public static final int SUBTYPE_CUSTOM_DATA = 0x13;
-            public static final int SUBTYPE_WIFI_STA_MAX_CONN_RETRY = 0x14;
-            public static final int SUBTYPE_WIFI_STA_CONN_END_REASON = 0x15;
-            public static final int SUBTYPE_WIFI_STA_CONN_RSSI = 0x16;
+            public static final int SUBTYPE_STA_WIFI_MAX_CONN_RETRY = 0x14;
+            public static final int SUBTYPE_STA_WIFI_CONN_END_REASON = 0x15;
+            public static final int SUBTYPE_STA_WIFI_CONN_RSSI = 0x16;
         }
     }
 }

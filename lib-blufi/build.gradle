@@ -2,11 +2,12 @@ plugins {
     id 'com.android.library'
 }
 
-def libVersion = "2.3.7"
+def libVersion = "2.4.0"
 
 android {
     compileSdkVersion 32
 
+    namespace 'blufi.espressif'
     defaultConfig {
         minSdkVersion 18
         targetSdkVersion 32
