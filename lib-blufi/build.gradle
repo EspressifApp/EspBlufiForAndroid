@@ -5,12 +5,12 @@ plugins {
 def libVersion = "2.4.0"
 
 android {
-    compileSdkVersion 32
+    compileSdk 32
 
     namespace 'blufi.espressif'
     defaultConfig {
-        minSdkVersion 18
-        targetSdkVersion 32
+        minSdk 18
+        targetSdk 32
 
         buildConfigField "String", "VERSION_NAME", "\"$libVersion\""
     }

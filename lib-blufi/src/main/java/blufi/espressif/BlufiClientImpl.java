@@ -480,7 +480,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             System.arraycopy(response, dataOffset, dataBytes, 0, dataLen);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "parseNotification: ", e);
             return -100;
         }
 
@@ -741,7 +741,7 @@ class BlufiClientImpl implements BlufiParameter {
 
             mAESKey = BlufiMD5.getMD5Bytes(espDH.getSecretKey());
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "__negotiateSecurity: ", e);
             onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
             return;
         }
@@ -750,7 +750,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             setSecurity = postSetSecurity(false, false, true, true);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "__negotiateSecurity: ", e);
         }
 
         if (setSecurity) {
@@ -1180,7 +1180,7 @@ class BlufiClientImpl implements BlufiParameter {
             try {
                 execute();
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.w(TAG, "ThrowableRunnable: ", e);
                 onError(e);
             }
         }
