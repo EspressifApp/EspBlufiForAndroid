@@ -62,7 +62,7 @@ This guide is a basic introduction to the APIs provided by Espressif to facilita
 
         switch (status) {
             case STATUS_SUCCESS:
-                String version = getVersionString(); // Get the version number
+                String version = response.getVersionString(); // Get the version number
                 break;
             default:
                 break;
@@ -173,7 +173,7 @@ This guide is a basic introduction to the APIs provided by Espressif to facilita
         // Configure Device in SoftAP
         params.setSoftAPSSID(ssid); // Configure the device SSID
         params.setSoftAPSecurity(security); // Configure the security option of the device: "0" - no security, "2" - WPA, "3" - WPA2, "4" - WPA/WPA2.
-        params.setSoftAPPAssword(password); // This option is mandatory, if the security option value is not "0".
+        params.setSoftAPPassword(password); // This option is mandatory, if the security option value is not "0".
         params.setSoftAPChannel(channel); // Configure the device channel
         params.setSoftAPMaxConnection(maxConnection); // Configure the number of maximum connections for the device
 
@@ -233,8 +233,8 @@ public void onError(BlufiClient client, int errCode) {
 public void onNegotiateSecurityResult(BlufiClient client, int status) {
 }
 
-// The result of the device configuration
-public void onConfigureResult(BlufiClient client, int status) {
+// The result of sending configure data
+public void onPostConfigureParams(BlufiClient client, int status) {
 }
 
 // Information on the received device version

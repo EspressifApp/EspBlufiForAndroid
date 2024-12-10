@@ -66,7 +66,7 @@
 	
 	    switch (status) {
 	        case STATUS_SUCCESS:
-	            String version = getVersionString(); // 获得版本号
+	            String version = response.getVersionString(); // 获得版本号
 	            break;
 	        default:
 	            break;
@@ -176,7 +176,7 @@
 	    // 设置 SoftAP 配置信息
 	    params.setSoftAPSSID(ssid); // 设置 Device 的 SSID
 	    params.setSoftAPSecurity(security); // 设置 Device 的加密方式：0 为不加密，2 为 WPA，3 为 WPA2，4 为 WPA/WPA2
-	    params.setSoftAPPAssword(password); // 若 Security 非 0 则必须设置 
+	    params.setSoftAPPassword(password); // 若 Security 非 0 则必须设置
 	    params.setSoftAPChannel(channel); // 设置 Device 的信道, 可不设
 	    params.setSoftAPMaxConnection(maxConnection); // 设置可连接 Device 的最大个数
 	
