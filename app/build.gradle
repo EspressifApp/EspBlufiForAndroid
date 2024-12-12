@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdk 32
+    compileSdk 34
 
     namespace 'com.espressif.espblufi'
     defaultConfig {
         applicationId "com.espressif.espblufi"
         minSdk 21
-        targetSdk 32
+        targetSdk 34
         versionCode 29
         versionName "1.6.3"
     }
@@ -24,6 +24,7 @@ android {
     }
     buildFeatures {
         viewBinding true
+        buildConfig true
     }
 }
 

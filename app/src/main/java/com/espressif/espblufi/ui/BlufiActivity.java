@@ -576,7 +576,11 @@ public class BlufiActivity extends BaseActivity {
 
         @Override
         public void onBindViewHolder(@NonNull MsgHolder holder, int position) {
-            Message msg = mMsgList.get(position);
+            int currentPosition = holder.getAdapterPosition();
+            if (currentPosition == RecyclerView.NO_POSITION) {
+                return;
+            }
+            Message msg = mMsgList.get(currentPosition);
             holder.text1.setText(msg.text);
             holder.text1.setTextColor(msg.isNotification ? Color.RED : Color.BLACK);
         }
