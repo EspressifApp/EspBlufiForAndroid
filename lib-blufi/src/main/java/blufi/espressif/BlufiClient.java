@@ -49,7 +49,7 @@ public class BlufiClient {
     /**
      * Set the maximum length of each Blufi packet, the excess part will be subcontracted.
      *
-     * @param lengthLimit the maximum length
+     * @param lengthLimit range is 20 ~ 255. If -1, use default limit value of BluFi
      */
     public void setPostPackageLengthLimit(int lengthLimit) {
         mImpl.setPostPackageLengthLimit(lengthLimit);

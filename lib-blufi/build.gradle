@@ -2,14 +2,15 @@ plugins {
     id 'com.android.library'
 }
 
-def libVersion = "2.3.7"
+def libVersion = "2.4.0"
 
 android {
-    compileSdkVersion 32
+    compileSdk 34
 
+    namespace 'blufi.espressif'
     defaultConfig {
-        minSdkVersion 18
-        targetSdkVersion 32
+        minSdk 18
+        targetSdk 34
 
         buildConfigField "String", "VERSION_NAME", "\"$libVersion\""
     }
@@ -18,6 +19,9 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    buildFeatures {
+        buildConfig true
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

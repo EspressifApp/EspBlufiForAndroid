@@ -1,8 +1,6 @@
 package blufi.espressif;
 
 import android.bluetooth.BluetoothGatt;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.bluetooth.BluetoothGattService;
 
 import java.util.List;
 
@@ -29,6 +27,10 @@ public abstract class BlufiCallback {
     public static final int CODE_CONF_ERR_POST_SOFTAP = -3003;
 
     public static final int CODE_GATT_WRITE_TIMEOUT = -4000;
+    public static final int CODE_GATT_DISCOVER_SERVICE_FAILED = -4001;
+    public static final int CODE_GATT_DISCOVER_WRITE_CHAR_FAILED = -4002;
+    public static final int CODE_GATT_DISCOVER_NOTIFY_CHAR_FAILED = -4003;
+    public static final int CODE_GATT_ERR_OPEN_NOTIFY = -4004;
 
     public static final int CODE_WIFI_SCAN_FAIL = 11;
 
@@ -37,13 +39,12 @@ public abstract class BlufiCallback {
      * User can post Blufi packet now.
      *
      * @param client BlufiClient
+     * @param status one of {@link #STATUS_SUCCESS}, {@link #CODE_GATT_DISCOVER_SERVICE_FAILED},
+     * {@link #CODE_GATT_DISCOVER_WRITE_CHAR_FAILED}, {@link #CODE_GATT_DISCOVER_NOTIFY_CHAR_FAILED},
+     * {@link #CODE_GATT_ERR_OPEN_NOTIFY}
      * @param gatt BluetoothGatt
-     * @param service null if discover Blufi GattService failed
-     * @param writeChar null if discover Blufi write GattCharacteristic failed
-     * @param notifyChar null if discover Blufi notify GattCharacteristic failed
      */
-    public void onGattPrepared(BlufiClient client, BluetoothGatt gatt, BluetoothGattService service,
-                               BluetoothGattCharacteristic writeChar, BluetoothGattCharacteristic notifyChar) {
+    public void onGattPrepared(BlufiClient client, int status, BluetoothGatt gatt) {
     }
 
     /**
@@ -78,20 +79,12 @@ public abstract class BlufiCallback {
     }
 
     /**
-     * @deprecated use {@link #onPostConfigureParams(BlufiClient, int)}
-     */
-    @Deprecated
-    public void onConfigureResult(BlufiClient client, int status) {
-    }
-
-    /**
      * Callback invoked when post config data over
      *
      * @param client BlufiClient
      * @param status {@link #STATUS_SUCCESS} means post data success
      */
     public void onPostConfigureParams(BlufiClient client, int status) {
-        onConfigureResult(client, status);
     }
 
     /**

@@ -45,9 +45,10 @@ import blufi.espressif.security.BlufiMD5;
 class BlufiClientImpl implements BlufiParameter {
     private static final String TAG = "BlufiClientImpl";
 
-    private static final int DEFAULT_PACKAGE_LENGTH = 20;
+    private static final int PACKAGE_LENGTH_DEFAULT = 20;
+    private static final int PACKAGE_LENGTH_MIN = 20;
+    private static final int PACKAGE_LENGTH_MAX = 255;
     private static final int PACKAGE_HEADER_LENGTH = 4;
-    private static final int MIN_PACKAGE_LENGTH = 20;
 
     private static final byte NEG_SECURITY_SET_TOTAL_LENGTH = 0x00;
     private static final byte NEG_SECURITY_SET_ALL_DATA = 0x01;
@@ -173,11 +174,15 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     void setPostPackageLengthLimit(int lengthLimit) {
-        if (lengthLimit <= 0) {
+        if (lengthLimit < 0) {
             mPackageLengthLimit = -1;
-        } else {
-            mPackageLengthLimit = Math.max(lengthLimit, MIN_PACKAGE_LENGTH);
+            return;
         }
+
+        mPackageLengthLimit = Math.min(
+                Math.max(lengthLimit, PACKAGE_LENGTH_MIN),
+                PACKAGE_LENGTH_MAX
+        );
     }
 
     void requestDeviceVersion() {
@@ -354,7 +359,7 @@ class BlufiClientImpl implements BlufiParameter {
         ByteArrayInputStream dataIS = new ByteArrayInputStream(data);
         ByteArrayOutputStream dataContent = new ByteArrayOutputStream();
         int pkgLengthLimit = mPackageLengthLimit > 0 ? mPackageLengthLimit :
-                (mBlufiMTU > 0 ? mBlufiMTU : DEFAULT_PACKAGE_LENGTH);
+                (mBlufiMTU > 0 ? mBlufiMTU : PACKAGE_LENGTH_DEFAULT);
         int postDataLengthLimit = pkgLengthLimit - PACKAGE_HEADER_LENGTH;
         postDataLengthLimit -= 2; // if frag, two bytes total length in data
         if (checksum) {
@@ -475,7 +480,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             System.arraycopy(response, dataOffset, dataBytes, 0, dataLen);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "parseNotification: ", e);
             return -100;
         }
 
@@ -653,15 +658,15 @@ class BlufiClientImpl implements BlufiParameter {
                 String softapSSID = new String(data);
                 response.setSoftAPSSID(softapSSID);
                 break;
-            case BlufiParameter.Type.Data.SUBTYPE_WIFI_STA_MAX_CONN_RETRY:
+            case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_MAX_CONN_RETRY:
                 int maxRetry = toInt(data[0]);
                 response.setMaxRetry(maxRetry);
                 break;
-            case BlufiParameter.Type.Data.SUBTYPE_WIFI_STA_CONN_END_REASON:
+            case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_CONN_END_REASON:
                 int endReason = toInt(data[0]);
                 response.setEndReason(endReason);
                 break;
-            case BlufiParameter.Type.Data.SUBTYPE_WIFI_STA_CONN_RSSI:
+            case BlufiParameter.Type.Data.SUBTYPE_STA_WIFI_CONN_RSSI:
                 int rssi = data[0];
                 response.setRssi(rssi);
                 break;
@@ -736,7 +741,7 @@ class BlufiClientImpl implements BlufiParameter {
 
             mAESKey = BlufiMD5.getMD5Bytes(espDH.getSecretKey());
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "__negotiateSecurity: ", e);
             onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
             return;
         }
@@ -745,7 +750,7 @@ class BlufiClientImpl implements BlufiParameter {
         try {
             setSecurity = postSetSecurity(false, false, true, true);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.w(TAG, "__negotiateSecurity: ", e);
         }
 
         if (setSecurity) {
@@ -1175,7 +1180,7 @@ class BlufiClientImpl implements BlufiParameter {
             try {
                 execute();
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.w(TAG, "ThrowableRunnable: ", e);
                 onError(e);
             }
         }
@@ -1237,23 +1242,29 @@ class BlufiClientImpl implements BlufiParameter {
                 mUserGattCallback.onServicesDiscovered(gatt, status);
             }
             if (mUserBlufiCallback != null) {
-                final BluetoothGattService cbService = service;
-                final BluetoothGattCharacteristic cbWriteChar = writeChar;
-                final BluetoothGattCharacteristic cbNotifyChar = notifyChar;
                 final BluetoothGattDescriptor notifyDesc = notifyChar == null ? null :
                         notifyChar.getDescriptor(BlufiParameter.UUID_NOTIFICATION_DESCRIPTOR);
-                if (service != null && writeChar != null && notifyChar != null && notifyDesc != null) {
-                    Log.d(TAG, "Write ENABLE_NOTIFICATION_VALUE");
+                Integer failedStatus = null;
+                if (service == null) {
+                    failedStatus = BlufiCallback.CODE_GATT_DISCOVER_SERVICE_FAILED;
+                } else if (writeChar == null) {
+                    failedStatus = BlufiCallback.CODE_GATT_DISCOVER_WRITE_CHAR_FAILED;
+                } else if (notifyChar == null) {
+                    failedStatus = BlufiCallback.CODE_GATT_DISCOVER_NOTIFY_CHAR_FAILED;
+                } else if (notifyDesc == null) {
+                    failedStatus = BlufiCallback.CODE_GATT_ERR_OPEN_NOTIFY;
+                } else {
+                    // Write ENABLE_NOTIFICATION_VALUE
                     notifyDesc.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
                     gatt.writeDescriptor(notifyDesc);
-                } else {
-                    mUIHandler.post(() -> {
-                        if (mUserBlufiCallback != null) {
-                            mUserBlufiCallback.onGattPrepared(mClient, gatt, cbService, cbWriteChar, cbNotifyChar);
-                        }
-                    });
                 }
 
+                if (failedStatus != null) {
+                    final int statusCode = failedStatus;
+                    mUIHandler.post(() -> {
+                        mUserBlufiCallback.onGattPrepared(mClient, statusCode, gatt);
+                    });
+                }
             }
         }
 
@@ -1314,7 +1325,12 @@ class BlufiClientImpl implements BlufiParameter {
                 BluetoothGattCharacteristic writeChar = mWriteChar;
                 mUIHandler.post(() -> {
                     if (mUserBlufiCallback != null) {
-                        mUserBlufiCallback.onGattPrepared(mClient, gatt, service, writeChar, notifyChar);
+                        if (status == BluetoothGatt.GATT_SUCCESS) {
+                            mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.STATUS_SUCCESS, gatt);
+                        } else {
+                            mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.CODE_GATT_ERR_OPEN_NOTIFY, gatt);
+                        }
+
                     }
                 });
             }
@@ -1339,7 +1355,10 @@ class BlufiClientImpl implements BlufiParameter {
         @TargetApi(Build.VERSION_CODES.LOLLIPOP)
         public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
-                mBlufiMTU = mtu - 4; // Three bytes BLE header, one byte reserved
+                mBlufiMTU = Math.min(
+                        mtu - 4, // Three bytes BLE header, one byte reserved
+                        PACKAGE_LENGTH_MAX
+                );
             }
             if (mUserGattCallback != null) {
                 mUserGattCallback.onMtuChanged(gatt, mtu, status);

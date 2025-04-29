@@ -6,7 +6,6 @@ import android.bluetooth.BluetoothGatt;
 import android.bluetooth.BluetoothGattCallback;
 import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattDescriptor;
-import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothProfile;
 import android.content.Intent;
 import android.graphics.Color;
@@ -359,41 +358,43 @@ public class BlufiActivity extends BaseActivity {
 
     private class BlufiCallbackMain extends BlufiCallback {
         @Override
-        public void onGattPrepared(
-                BlufiClient client,
-                BluetoothGatt gatt,
-                BluetoothGattService service,
-                BluetoothGattCharacteristic writeChar,
-                BluetoothGattCharacteristic notifyChar
-        ) {
-            if (service == null) {
-                mLog.w("Discover service failed");
-                gatt.disconnect();
-                updateMessage("Discover service failed", false);
-                return;
-            }
-            if (writeChar == null) {
-                mLog.w("Get write characteristic failed");
-                gatt.disconnect();
-                updateMessage("Get write characteristic failed", false);
-                return;
-            }
-            if (notifyChar == null) {
-                mLog.w("Get notification characteristic failed");
-                gatt.disconnect();
-                updateMessage("Get notification characteristic failed", false);
-                return;
-            }
-
-            updateMessage("Discover service and characteristics success", false);
-
-            int mtu = BlufiConstants.DEFAULT_MTU_LENGTH;
-            mLog.d("Request MTU " + mtu);
-            boolean requestMtu = gatt.requestMtu(mtu);
-            if (!requestMtu) {
-                mLog.w("Request mtu failed");
-                updateMessage(String.format(Locale.ENGLISH, "Request mtu %d failed", mtu), false);
-                onGattServiceCharacteristicDiscovered();
+        public void onGattPrepared(BlufiClient client, int status, BluetoothGatt gatt) {
+            switch (status) {
+                case STATUS_SUCCESS:
+                    updateMessage("Discover service and characteristics success", false);
+                    int mtu = BlufiConstants.DEFAULT_MTU_LENGTH;
+                    mLog.d("Request MTU " + mtu);
+                    boolean requestMtu = gatt.requestMtu(mtu);
+                    if (!requestMtu) {
+                        mLog.w("Request mtu failed");
+                        updateMessage(String.format(Locale.ENGLISH, "Request mtu %d failed", mtu), false);
+                        onGattServiceCharacteristicDiscovered();
+                    }
+                    return;
+                case CODE_GATT_DISCOVER_SERVICE_FAILED:
+                    mLog.w("Discover service failed");
+                    gatt.disconnect();
+                    updateMessage("Discover service failed", false);
+                    return;
+                case CODE_GATT_DISCOVER_WRITE_CHAR_FAILED:
+                    mLog.w("Get write characteristic failed");
+                    gatt.disconnect();
+                    updateMessage("Get write characteristic failed", false);
+                    return;
+                case CODE_GATT_DISCOVER_NOTIFY_CHAR_FAILED:
+                    mLog.w("Get notification characteristic failed");
+                    gatt.disconnect();
+                    updateMessage("Get notification characteristic failed", false);
+                    return;
+                case CODE_GATT_ERR_OPEN_NOTIFY:
+                    mLog.w("Open notify function failed");
+                    gatt.disconnect();
+                    updateMessage("Open notify function failed", false);
+                    return;
+                default:
+                    gatt.disconnect();
+                    updateMessage("onGattPrepared unknown status", false);
+                    break;
             }
         }
 
