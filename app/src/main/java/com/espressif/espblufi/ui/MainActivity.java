@@ -184,8 +184,12 @@ public class MainActivity extends AppCompatActivity {
         mScanStartTime = SystemClock.elapsedRealtime();
 
         mLog.d("Start scan ble");
-        scanner.startScan(null, new ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(),
-                mScanCallback);
+        ScanSettings.Builder scanSettingsBuilder = new ScanSettings.Builder()
+                .setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            scanSettingsBuilder.setLegacy(false);
+        }
+        scanner.startScan(null, scanSettingsBuilder.build(), mScanCallback);
         mUpdateFuture = mThreadPool.submit(() -> {
             while (!Thread.currentThread().isInterrupted()) {
                 try {

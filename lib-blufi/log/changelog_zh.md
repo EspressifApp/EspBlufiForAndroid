@@ -1,6 +1,12 @@
 # 修改记录
 [English](changelog_en.md)
 
+### 2.4.1
+- 修复发布库至 JitPack
+
+## 2.4.0
+- 修复 DH secret 的生成
+
 ## 2.3.7
 - `BlufiClient` 新增 gatt 写超时接口
   ```java
