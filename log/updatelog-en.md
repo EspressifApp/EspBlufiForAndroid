@@ -2,6 +2,11 @@
 
 # Update Log
 
+## 1.6.5
+- Update `targetSdk` to 34
+- Android 8.0 or late support scanning BLE 5.0
+- Update blufi lib to 2.4.1
+
 ## 1.6.3
 - Set gatt write timeout as 5 seconds.
 - Update blufi lib to `2.3.7`
