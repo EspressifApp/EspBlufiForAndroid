@@ -113,7 +113,7 @@ public class BlufiDH {
         try {
             // Use the values to generate a key pair
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH");
-            DHParameterSpec dhSpec = new DHParameterSpec(p, g);
+            DHParameterSpec dhSpec = new DHParameterSpec(p, g, length);
             keyGen.initialize(dhSpec);
             KeyPair keypair = keyGen.generateKeyPair();
 

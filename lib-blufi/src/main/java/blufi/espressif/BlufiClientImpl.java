@@ -815,25 +815,20 @@ class BlufiClientImpl implements BlufiParameter {
         } while (k == null);
 
         byte[] pBytes = toBytes(p);
-        Log.d(TAG, "postNegotiateSecurity: p len = " + pBytes.length);
         byte[] gBytes = toBytes(g);
-        Log.d(TAG, "postNegotiateSecurity: g len = " + gBytes.length);
         byte[] kBytes = toBytes(k);
         Log.d(TAG, "postNegotiateSecurity: k len = " + kBytes.length);
 
         ByteArrayOutputStream dataOS = new ByteArrayOutputStream();
 
         int pgkLength = pBytes.length + gBytes.length + kBytes.length + 6;
-        Log.d(TAG, "postNegotiateSecurity: pkg Length: " + pgkLength);
         int pgkLen1 = (pgkLength >> 8) & 0xff;
         int pgkLen2 = pgkLength & 0xff;
         dataOS.write(NEG_SECURITY_SET_TOTAL_LENGTH);
         dataOS.write((byte) pgkLen1);
         dataOS.write((byte) pgkLen2);
         try {
-            Log.d(TAG, "postNegotiateSecurity: post length");
             boolean postLength = post(false, false, mRequireAck, type, dataOS.toByteArray());
-            Log.d(TAG, "postNegotiateSecurity: post length " + postLength);
             if (!postLength) {
                 return null;
             }
@@ -870,9 +865,7 @@ class BlufiClientImpl implements BlufiParameter {
         dataOS.write(kBytes, 0, kLength);
 
         try {
-            Log.d(TAG, "postNegotiateSecurity: post pgk");
             boolean postPGK = post(false, false, mRequireAck, type, dataOS.toByteArray());
-            Log.d(TAG, "postNegotiateSecurity: post pgk " + postPGK);
             if (!postPGK) {
                 return null;
             }
