@@ -10,6 +10,10 @@ public class BlufiVersionResponse {
         mVersionValues[1] = smallVer;
     }
 
+    public int[] getVersionValues() {
+        return mVersionValues;
+    }
+
     public String getVersionString() {
         return String.format(Locale.ENGLISH, "V%d.%d", mVersionValues[0], mVersionValues[1]);
     }

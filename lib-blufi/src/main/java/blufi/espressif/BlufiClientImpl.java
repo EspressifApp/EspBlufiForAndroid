@@ -57,6 +57,17 @@ class BlufiClientImpl implements BlufiParameter {
             "9153bd76b24222d03274e4725a5406092e9e82e9135c643cae98132b0d95f7d6" +
             "5347c68afc1e677da90e51bbab5f5cf429c291b4ba39c6b2dc5e8c7231e46aa7" +
             "728e87664532cdf547be20c9a3fa8342be6e34371a27c06f7dc0edddd2f86373";
+    private static final String DH_P_2048 = "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1" +
+            "29024E088A67CC74020BBEA63B139B22514A08798E3404DD" +
+            "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245" +
+            "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED" +
+            "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3D" +
+            "C2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F" +
+            "83655D23DCA3AD961C62F356208552BB9ED529077096966D" +
+            "670C354E4ABC9804F1746C08CA18217C32905E462E36CE3B" +
+            "E39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9" +
+            "DE2BCBF6955817183995497CEA956AE515D2261898FA0510" +
+            "15728E5A8AACAA68FFFFFFFFFFFFFFFF";
     private static final String DH_G = "2";
     private static final String AES_TRANSFORMATION = "AES/CFB/NoPadding";
 
@@ -99,6 +110,9 @@ class BlufiClientImpl implements BlufiParameter {
     private final Handler mUIHandler;
 
     private int mConnectState = BluetoothGatt.STATE_DISCONNECTED;
+
+    private Runnable mPreparedRunnable = null;
+    private int mDeviceVersion = -1;
 
     BlufiClientImpl(BlufiClient client, Context context, BluetoothDevice device) {
         mClient = client;
@@ -776,9 +790,19 @@ class BlufiClientImpl implements BlufiParameter {
         int type = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_NEG);
 
         final int radix = 16;
-        final int dhLength = 1024;
-        final BigInteger dhP = new BigInteger(DH_P, radix);
-        final BigInteger dhG = new BigInteger(DH_G);
+        final int dhLength;
+        final BigInteger dhP;
+        final BigInteger dhG;
+        if (mDeviceVersion >= 0x0104) {
+            dhLength = 2048;
+            dhP = new BigInteger(DH_P_2048, radix);
+            dhG = new BigInteger(DH_G);
+        } else {
+            dhLength = 1024;
+            dhP = new BigInteger(DH_P, radix);
+            dhG = new BigInteger(DH_G);
+        }
+
         BlufiDH blufiDH;
         String p;
         String g;
@@ -791,19 +815,25 @@ class BlufiClientImpl implements BlufiParameter {
         } while (k == null);
 
         byte[] pBytes = toBytes(p);
+        Log.d(TAG, "postNegotiateSecurity: p len = " + pBytes.length);
         byte[] gBytes = toBytes(g);
+        Log.d(TAG, "postNegotiateSecurity: g len = " + gBytes.length);
         byte[] kBytes = toBytes(k);
+        Log.d(TAG, "postNegotiateSecurity: k len = " + kBytes.length);
 
         ByteArrayOutputStream dataOS = new ByteArrayOutputStream();
 
         int pgkLength = pBytes.length + gBytes.length + kBytes.length + 6;
+        Log.d(TAG, "postNegotiateSecurity: pkg Length: " + pgkLength);
         int pgkLen1 = (pgkLength >> 8) & 0xff;
         int pgkLen2 = pgkLength & 0xff;
         dataOS.write(NEG_SECURITY_SET_TOTAL_LENGTH);
         dataOS.write((byte) pgkLen1);
         dataOS.write((byte) pgkLen2);
         try {
+            Log.d(TAG, "postNegotiateSecurity: post length");
             boolean postLength = post(false, false, mRequireAck, type, dataOS.toByteArray());
+            Log.d(TAG, "postNegotiateSecurity: post length " + postLength);
             if (!postLength) {
                 return null;
             }
@@ -840,7 +870,9 @@ class BlufiClientImpl implements BlufiParameter {
         dataOS.write(kBytes, 0, kLength);
 
         try {
+            Log.d(TAG, "postNegotiateSecurity: post pgk");
             boolean postPGK = post(false, false, mRequireAck, type, dataOS.toByteArray());
+            Log.d(TAG, "postNegotiateSecurity: post pgk " + postPGK);
             if (!postPGK) {
                 return null;
             }
@@ -859,7 +891,8 @@ class BlufiClientImpl implements BlufiParameter {
         if (publicKey != null) {
             BigInteger y = publicKey.getY();
             StringBuilder keySB = new StringBuilder(y.toString(16));
-            while (keySB.length() < 256) {
+            int keyStrLength = espDH.getLength() / 8 * 2;
+            while (keySB.length() < keyStrLength) {
                 keySB.insert(0, "0");
             }
             return keySB.toString();
@@ -1080,6 +1113,14 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void onVersionResponse(final int status, final BlufiVersionResponse response) {
+        if (status == BlufiCallback.STATUS_SUCCESS) {
+            int[] version = response.getVersionValues();
+            mDeviceVersion = (version[0] << 16) | version[1];
+        }
+        if (mPreparedRunnable != null) {
+            mPreparedRunnable.run();
+            mPreparedRunnable = null;
+        }
         mUIHandler.post(() -> {
             if (mUserBlufiCallback != null) {
                 mUserBlufiCallback.onDeviceVersionResponse(mClient, status, response);
@@ -1326,7 +1367,11 @@ class BlufiClientImpl implements BlufiParameter {
                 mUIHandler.post(() -> {
                     if (mUserBlufiCallback != null) {
                         if (status == BluetoothGatt.GATT_SUCCESS) {
-                            mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.STATUS_SUCCESS, gatt);
+//                            mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.STATUS_SUCCESS, gatt);
+                            mPreparedRunnable = () -> {
+                                mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.STATUS_SUCCESS, gatt);
+                            };
+                            requestDeviceVersion();
                         } else {
                             mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.CODE_GATT_ERR_OPEN_NOTIFY, gatt);
                         }
