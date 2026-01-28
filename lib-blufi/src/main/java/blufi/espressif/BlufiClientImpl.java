@@ -735,8 +735,8 @@ class BlufiClientImpl implements BlufiParameter {
 
         BigInteger devicePublicKey;
         try {
-            devicePublicKey = mDevicePublicKeyQueue.take();
-            if (devicePublicKey.bitLength() == 0) {
+            devicePublicKey = mDevicePublicKeyQueue.poll(20, TimeUnit.SECONDS);
+            if (devicePublicKey == null || devicePublicKey.bitLength() == 0) {
                 onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_DEV_KEY);
                 return;
             }
@@ -793,11 +793,14 @@ class BlufiClientImpl implements BlufiParameter {
         final int dhLength;
         final BigInteger dhP;
         final BigInteger dhG;
+        Log.d(TAG, "postNegotiateSecurity: dev: " + Integer.toHexString(mDeviceVersion));
         if (mDeviceVersion >= 0x0104) {
+            Log.d(TAG, "postNegotiateSecurity: 2048");
             dhLength = 2048;
             dhP = new BigInteger(DH_P_2048, radix);
             dhG = new BigInteger(DH_G);
         } else {
+            Log.d(TAG, "postNegotiateSecurity: 1024");
             dhLength = 1024;
             dhP = new BigInteger(DH_P, radix);
             dhG = new BigInteger(DH_G);
@@ -924,6 +927,7 @@ class BlufiClientImpl implements BlufiParameter {
     private class SecurityCallback {
         void onReceiveDevicePublicKey(byte[] keyData) {
             String keyStr = toHex(keyData);
+            Log.d(TAG, "onReceiveDevicePublicKey: " + keyStr);
             try {
                 BigInteger devicePublicValue = new BigInteger(keyStr, 16);
                 mDevicePublicKeyQueue.add(devicePublicValue);
@@ -1108,7 +1112,7 @@ class BlufiClientImpl implements BlufiParameter {
     private void onVersionResponse(final int status, final BlufiVersionResponse response) {
         if (status == BlufiCallback.STATUS_SUCCESS) {
             int[] version = response.getVersionValues();
-            mDeviceVersion = (version[0] << 16) | version[1];
+            mDeviceVersion = (version[0] << 8) | version[1];
         }
         if (mPreparedRunnable != null) {
             mPreparedRunnable.run();

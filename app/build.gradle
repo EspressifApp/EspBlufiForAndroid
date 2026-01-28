@@ -9,13 +9,13 @@ android {
         minSdk 21
         targetSdk 34
         versionCode 31
-        versionName "1.6.5"
+        versionName "1.7.0"
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
