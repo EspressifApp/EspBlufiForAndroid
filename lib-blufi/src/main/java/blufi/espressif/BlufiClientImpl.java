@@ -39,7 +39,7 @@ import blufi.espressif.response.BlufiVersionResponse;
 import blufi.espressif.security.BlufiAES;
 import blufi.espressif.security.BlufiCRC;
 import blufi.espressif.security.BlufiDH;
-import blufi.espressif.security.BlufiMD5;
+import blufi.espressif.security.BlufiHash;
 
 @SuppressLint("MissingPermission")
 class BlufiClientImpl implements BlufiParameter {
@@ -70,6 +70,8 @@ class BlufiClientImpl implements BlufiParameter {
             "15728E5A8AACAA68FFFFFFFFFFFFFFFF";
     private static final String DH_G = "2";
     private static final String AES_TRANSFORMATION = "AES/CFB/NoPadding";
+    private static final int SECURITY_V1 = 1;
+    private static final int SECURITY_V2 = 2;
 
     private boolean mPrintDebug = BuildConfig.DEBUG;
 
@@ -753,7 +755,13 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             }
 
-            mAESKey = BlufiMD5.getMD5Bytes(espDH.getSecretKey());
+            int securityVersion = getSecurityVersion();
+            if (securityVersion == SECURITY_V2) {
+                mAESKey = BlufiHash.getSHA256Bytes(espDH.getSecretKey());
+                Log.d(TAG, "__negotiateSecurity: XXJ: aeskey: SHA256: " + mAESKey.length);
+            } else {
+                mAESKey = BlufiHash.getMD5Bytes(espDH.getSecretKey());
+            }
         } catch (Exception e) {
             Log.w(TAG, "__negotiateSecurity: ", e);
             onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
@@ -786,6 +794,14 @@ class BlufiClientImpl implements BlufiParameter {
         });
     }
 
+    private int getSecurityVersion() {
+        if (mDeviceVersion < 0x0104) {
+            return SECURITY_V1;
+        } else {
+            return SECURITY_V2;
+        }
+    }
+
     private BlufiDH postNegotiateSecurity() {
         int type = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_NEG);
 
@@ -794,7 +810,8 @@ class BlufiClientImpl implements BlufiParameter {
         final BigInteger dhP;
         final BigInteger dhG;
         Log.d(TAG, "postNegotiateSecurity: dev: " + Integer.toHexString(mDeviceVersion));
-        if (mDeviceVersion >= 0x0104) {
+        int securityVersion = getSecurityVersion();
+        if (securityVersion == SECURITY_V2) {
             Log.d(TAG, "postNegotiateSecurity: 2048");
             dhLength = 2048;
             dhP = new BigInteger(DH_P_2048, radix);
