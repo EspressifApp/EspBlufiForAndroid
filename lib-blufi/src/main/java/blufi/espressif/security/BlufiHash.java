@@ -18,7 +18,7 @@ public class BlufiHash {
 
     public static byte[] getSHA256Bytes(byte[] data) {
         try {
-            MessageDigest digest = MessageDigest.getInstance("sha256");
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
             digest.update(data);
             return digest.digest();
         } catch (NoSuchAlgorithmException | NullPointerException e) {
