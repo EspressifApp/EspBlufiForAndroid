@@ -39,7 +39,7 @@ import blufi.espressif.response.BlufiVersionResponse;
 import blufi.espressif.security.BlufiAES;
 import blufi.espressif.security.BlufiCRC;
 import blufi.espressif.security.BlufiDH;
-import blufi.espressif.security.BlufiMD5;
+import blufi.espressif.security.BlufiHash;
 
 @SuppressLint("MissingPermission")
 class BlufiClientImpl implements BlufiParameter {
@@ -57,8 +57,26 @@ class BlufiClientImpl implements BlufiParameter {
             "9153bd76b24222d03274e4725a5406092e9e82e9135c643cae98132b0d95f7d6" +
             "5347c68afc1e677da90e51bbab5f5cf429c291b4ba39c6b2dc5e8c7231e46aa7" +
             "728e87664532cdf547be20c9a3fa8342be6e34371a27c06f7dc0edddd2f86373";
+    private static final String DH_P_3072 = "FFFFFFFFFFFFFFFFADF85458A2BB4A9AAFDC5620273D3CF1" +
+            "D8B9C583CE2D3695A9E13641146433FBCC939DCE249B3EF9" +
+            "7D2FE363630C75D8F681B202AEC4617AD3DF1ED5D5FD6561" +
+            "2433F51F5F066ED0856365553DED1AF3B557135E7F57C935" +
+            "984F0C70E0E68B77E2A689DAF3EFE8721DF158A136ADE735" +
+            "30ACCA4F483A797ABC0AB182B324FB61D108A94BB2C8E3FB" +
+            "B96ADAB760D7F4681D4F42A3DE394DF4AE56EDE76372BB19" +
+            "0B07A7C8EE0A6D709E02FCE1CDF7E2ECC03404CD28342F61" +
+            "9172FE9CE98583FF8E4F1232EEF28183C3FE3B1B4C6FAD73" +
+            "3BB5FCBC2EC22005C58EF1837D1683B2C6F34A26C1B2EFFA" +
+            "886B4238611FCFDCDE355B3B6519035BBC34F4DEF99C0238" +
+            "61B46FC9D6E6C9077AD91D2691F7F7EE598CB0FAC186D91C" +
+            "AEFE130985139270B4130C93BC437944F4FD4452E2D74DD3" +
+            "64F2E21E71F54BFF5CAE82AB9C9DF69EE86D2BC522363A0D" +
+            "ABC521979B0DEADA1DBF9A42D5C4484E0ABCD06BFA53DDEF" +
+            "3C1B20EE3FD59D7C25E41D2B66C62E37FFFFFFFFFFFFFFFF";
     private static final String DH_G = "2";
     private static final String AES_TRANSFORMATION = "AES/CFB/NoPadding";
+    private static final int SECURITY_V1 = 1;
+    private static final int SECURITY_V2 = 2;
 
     private boolean mPrintDebug = BuildConfig.DEBUG;
 
@@ -99,6 +117,9 @@ class BlufiClientImpl implements BlufiParameter {
     private final Handler mUIHandler;
 
     private int mConnectState = BluetoothGatt.STATE_DISCONNECTED;
+
+    private Runnable mPreparedRunnable = null;
+    private int mDeviceVersion = -1;
 
     BlufiClientImpl(BlufiClient client, Context context, BluetoothDevice device) {
         mClient = client;
@@ -721,8 +742,8 @@ class BlufiClientImpl implements BlufiParameter {
 
         BigInteger devicePublicKey;
         try {
-            devicePublicKey = mDevicePublicKeyQueue.take();
-            if (devicePublicKey.bitLength() == 0) {
+            devicePublicKey = mDevicePublicKeyQueue.poll(20, TimeUnit.SECONDS);
+            if (devicePublicKey == null || devicePublicKey.bitLength() == 0) {
                 onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_DEV_KEY);
                 return;
             }
@@ -739,7 +760,12 @@ class BlufiClientImpl implements BlufiParameter {
                 return;
             }
 
-            mAESKey = BlufiMD5.getMD5Bytes(espDH.getSecretKey());
+            int securityVersion = getSecurityVersion();
+            if (securityVersion == SECURITY_V2) {
+                mAESKey = BlufiHash.getSHA256Bytes(espDH.getSecretKey());
+            } else {
+                mAESKey = BlufiHash.getMD5Bytes(espDH.getSecretKey());
+            }
         } catch (Exception e) {
             Log.w(TAG, "__negotiateSecurity: ", e);
             onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
@@ -772,13 +798,32 @@ class BlufiClientImpl implements BlufiParameter {
         });
     }
 
+    private int getSecurityVersion() {
+        if (mDeviceVersion < 0x0104) {
+            return SECURITY_V1;
+        } else {
+            return SECURITY_V2;
+        }
+    }
+
     private BlufiDH postNegotiateSecurity() {
         int type = getTypeValue(Type.Data.PACKAGE_VALUE, Type.Data.SUBTYPE_NEG);
 
         final int radix = 16;
-        final int dhLength = 1024;
-        final BigInteger dhP = new BigInteger(DH_P, radix);
-        final BigInteger dhG = new BigInteger(DH_G);
+        final int dhLength;
+        final BigInteger dhP;
+        final BigInteger dhG;
+        int securityVersion = getSecurityVersion();
+        if (securityVersion == SECURITY_V2) {
+            dhLength = 3072;
+            dhP = new BigInteger(DH_P_3072, radix);
+            dhG = new BigInteger(DH_G);
+        } else {
+            dhLength = 1024;
+            dhP = new BigInteger(DH_P, radix);
+            dhG = new BigInteger(DH_G);
+        }
+
         BlufiDH blufiDH;
         String p;
         String g;
@@ -859,7 +904,8 @@ class BlufiClientImpl implements BlufiParameter {
         if (publicKey != null) {
             BigInteger y = publicKey.getY();
             StringBuilder keySB = new StringBuilder(y.toString(16));
-            while (keySB.length() < 256) {
+            int keyStrLength = espDH.getLength() / 8 * 2;
+            while (keySB.length() < keyStrLength) {
                 keySB.insert(0, "0");
             }
             return keySB.toString();
@@ -1080,6 +1126,14 @@ class BlufiClientImpl implements BlufiParameter {
     }
 
     private void onVersionResponse(final int status, final BlufiVersionResponse response) {
+        if (status == BlufiCallback.STATUS_SUCCESS) {
+            int[] version = response.getVersionValues();
+            mDeviceVersion = (version[0] << 8) | version[1];
+        }
+        if (mPreparedRunnable != null) {
+            mPreparedRunnable.run();
+            mPreparedRunnable = null;
+        }
         mUIHandler.post(() -> {
             if (mUserBlufiCallback != null) {
                 mUserBlufiCallback.onDeviceVersionResponse(mClient, status, response);
@@ -1326,7 +1380,11 @@ class BlufiClientImpl implements BlufiParameter {
                 mUIHandler.post(() -> {
                     if (mUserBlufiCallback != null) {
                         if (status == BluetoothGatt.GATT_SUCCESS) {
-                            mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.STATUS_SUCCESS, gatt);
+//                            mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.STATUS_SUCCESS, gatt);
+                            mPreparedRunnable = () -> {
+                                mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.STATUS_SUCCESS, gatt);
+                            };
+                            requestDeviceVersion();
                         } else {
                             mUserBlufiCallback.onGattPrepared(mClient, BlufiCallback.CODE_GATT_ERR_OPEN_NOTIFY, gatt);
                         }

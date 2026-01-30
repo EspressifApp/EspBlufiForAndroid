@@ -2,6 +2,9 @@
 
 # Update Log
 
+## 1.7.0
+- Updated the Blufi library to version 2.5.0, supporting IDF 6.0 BluFi.
+
 ## 1.6.5
 - Update `targetSdk` to 34
 - Android 8.0 or late support scanning BLE 5.0

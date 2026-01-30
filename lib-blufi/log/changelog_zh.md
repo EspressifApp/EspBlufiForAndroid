@@ -1,6 +1,9 @@
 # 修改记录
 [English](changelog_en.md)
 
+### 2.5.0
+- 支持设备端 BluFi 1.4 版本加密
+
 ### 2.4.1
 - 修复发布库至 JitPack
 

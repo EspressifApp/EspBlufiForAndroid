@@ -24,6 +24,7 @@ public class BlufiDH {
 
     private final BigInteger mP;
     private final BigInteger mG;
+    private final int mLength;
 
     private final DHPrivateKey mPrivateKey;
     private final DHPublicKey mPublicKey;
@@ -33,10 +34,21 @@ public class BlufiDH {
     public BlufiDH(BigInteger p, BigInteger g, int length) {
         mP = p;
         mG = g;
+        mLength = length;
         Key[] keys = generateKeys(p, g, length);
         assert keys != null;
         mPrivateKey = (DHPrivateKey) keys[0];
         mPublicKey = (DHPublicKey) keys[1];
+    }
+
+    public BlufiDH(int length) {
+        mLength = length;
+        Key[] keys = generateKeys(length);
+        assert keys != null;
+        mPrivateKey = (DHPrivateKey) keys[0];
+        mPublicKey = (DHPublicKey) keys[1];
+        mP = mPublicKey.getParams().getP();
+        mG = mPublicKey.getParams().getG();
     }
 
     public BigInteger getP() {
@@ -45,6 +57,10 @@ public class BlufiDH {
 
     public BigInteger getG() {
         return mG;
+    }
+
+    public int getLength() {
+        return mLength;
     }
 
     public DHPrivateKey getPrivateKey() {
@@ -110,6 +126,26 @@ public class BlufiDH {
         } catch (NoSuchAlgorithmException
                 | InvalidAlgorithmParameterException
                 | ClassCastException e) {
+            Log.w(TAG, e);
+
+            return null;
+        }
+    }
+
+    private static Key[] generateKeys(int length) {
+        try {
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DH");
+            keyGen.initialize(length);
+            KeyPair keypair = keyGen.generateKeyPair();
+
+            // Get the generated public and private keys
+            Key[] result = new Key[2];
+            result[0] = keypair.getPrivate();
+            result[1] = keypair.getPublic();
+
+            return result;
+        } catch (NoSuchAlgorithmException
+                 | ClassCastException e) {
             Log.w(TAG, e);
 
             return null;
