@@ -944,7 +944,6 @@ class BlufiClientImpl implements BlufiParameter {
     private class SecurityCallback {
         void onReceiveDevicePublicKey(byte[] keyData) {
             String keyStr = toHex(keyData);
-            Log.d(TAG, "onReceiveDevicePublicKey: " + keyStr);
             try {
                 BigInteger devicePublicValue = new BigInteger(keyStr, 16);
                 mDevicePublicKeyQueue.add(devicePublicValue);
