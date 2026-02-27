@@ -471,7 +471,7 @@ class BlufiClientImpl implements BlufiParameter {
                     data = aes.encrypt(data);
                     break;
                 case SECURITY_V2:
-                    data = mEncryptorV2.encrypt(data);
+                    data = mEncryptorV2.encryptUpdate(data);
                     break;
             }
         }
@@ -786,20 +786,21 @@ class BlufiClientImpl implements BlufiParameter {
 
         try {
             espDH.generateSecretKey(devicePublicKey);
-            if (espDH.getSecretKey() == null) {
+            byte[] secretKey = espDH.getSecretKey();
+            if (secretKey == null) {
                 onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
                 return;
             }
 
             int securityVersion = getSecurityVersion();
             if (securityVersion == SECURITY_V2) {
-                mAESKey = BlufiHash.getSHA256Bytes(espDH.getSecretKey());
-                byte[] encIV = generateAESIV2(ENC_DOMAIN, mAESKey);
+                mAESKey = BlufiHash.getSHA256Bytes(secretKey);
+                byte[] encIV = generateAESIV2(DEC_DOMAIN, secretKey);
                 mEncryptorV2 = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, encIV);
-                byte[] decIV = generateAESIV2(DEC_DOMAIN, mAESKey);
+                byte[] decIV = generateAESIV2(ENC_DOMAIN, secretKey);
                 mDecryptorV2 = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, decIV);
             } else {
-                mAESKey = BlufiHash.getMD5Bytes(espDH.getSecretKey());
+                mAESKey = BlufiHash.getMD5Bytes(secretKey);
             }
         } catch (Exception e) {
             Log.w(TAG, "__negotiateSecurity: ", e);
