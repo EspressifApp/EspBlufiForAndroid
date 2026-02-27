@@ -108,6 +108,8 @@ class BlufiClientImpl implements BlufiParameter {
     private volatile BlufiNotifyData mNotifyData;
 
     private byte[] mAESKey;
+    private BlufiAES mEncryptorV2;
+    private BlufiAES mDecryptorV2;
 
     private boolean mEncrypted = false;
     private boolean mChecksum = false;
@@ -466,13 +468,12 @@ class BlufiClientImpl implements BlufiParameter {
             switch (getSecurityVersion()) {
                 case SECURITY_V1:
                     aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+                    data = aes.encrypt(data);
                     break;
                 case SECURITY_V2:
-                    byte[] iv = generateAESIV2(ENC_DOMAIN, mAESKey);
-                    aes = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, iv);
+                    data = mEncryptorV2.encrypt(data);
                     break;
             }
-            data = aes.encrypt(data);
         }
         if (data != null) {
             byteOS.write(data, 0, data.length);
@@ -532,13 +533,12 @@ class BlufiClientImpl implements BlufiParameter {
             switch (getSecurityVersion()) {
                 case SECURITY_V1:
                     aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+                    dataBytes = aes.decrypt(dataBytes);
                     break;
                 case SECURITY_V2:
-                    byte[] iv = generateAESIV2(ENC_DOMAIN, mAESKey);
-                    aes = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, iv);
+                    dataBytes = mDecryptorV2.decryptUpdate(dataBytes);
                     break;
             }
-            dataBytes = aes.decrypt(dataBytes);
         }
 
         if (frameCtrlData.isChecksum()) {
@@ -794,6 +794,10 @@ class BlufiClientImpl implements BlufiParameter {
             int securityVersion = getSecurityVersion();
             if (securityVersion == SECURITY_V2) {
                 mAESKey = BlufiHash.getSHA256Bytes(espDH.getSecretKey());
+                byte[] encIV = generateAESIV2(ENC_DOMAIN, mAESKey);
+                mEncryptorV2 = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, encIV);
+                byte[] decIV = generateAESIV2(DEC_DOMAIN, mAESKey);
+                mDecryptorV2 = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, decIV);
             } else {
                 mAESKey = BlufiHash.getMD5Bytes(espDH.getSecretKey());
             }

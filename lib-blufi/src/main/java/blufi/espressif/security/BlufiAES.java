@@ -77,6 +77,10 @@ public class BlufiAES {
         return null;
     }
 
+    public byte[] encryptUpdate(byte[] content) {
+        return mEncryptCipher.update(content);
+    }
+
     public byte[] decrypt(byte[] content) {
         try {
             return mDecryptCipher.doFinal(content);
@@ -85,5 +89,9 @@ public class BlufiAES {
         }
 
         return null;
+    }
+
+    public byte[] decryptUpdate(byte[] content) {
+        return mDecryptCipher.update(content);
     }
 }
