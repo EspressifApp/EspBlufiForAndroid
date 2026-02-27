@@ -19,6 +19,7 @@ import android.util.Log;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -75,6 +76,9 @@ class BlufiClientImpl implements BlufiParameter {
             "3C1B20EE3FD59D7C25E41D2B66C62E37FFFFFFFFFFFFFFFF";
     private static final String DH_G = "2";
     private static final String AES_TRANSFORMATION = "AES/CFB/NoPadding";
+    private static final String AES_TRANSFORMATION_V2 = "AES/CTR/NoPadding";
+    private static final String ENC_DOMAIN = "blufi_enc";
+    private static final String DEC_DOMAIN = "blufi_dec";
     private static final int SECURITY_V1 = 1;
     private static final int SECURITY_V2 = 2;
 
@@ -320,6 +324,15 @@ class BlufiClientImpl implements BlufiParameter {
         return result;
     }
 
+    private byte[] generateAESIV2(String domain, byte[] key) {
+        ByteArrayOutputStream bytesOS = new ByteArrayOutputStream();
+        byte[] domainBytes = domain.getBytes();
+        bytesOS.write(domainBytes, 0, domainBytes.length);
+        bytesOS.write(key, 0, key.length);
+        byte[] hash = BlufiHash.getSHA256Bytes(bytesOS.toByteArray());
+        return Arrays.copyOfRange(hash, 0, 16);
+    }
+
     private boolean isConnected() {
         return mConnectState == BluetoothGatt.STATE_CONNECTED;
     }
@@ -449,7 +462,16 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         if (encrypt && data != null && data.length > 0) {
-            BlufiAES aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+            BlufiAES aes = null;
+            switch (getSecurityVersion()) {
+                case SECURITY_V1:
+                    aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+                    break;
+                case SECURITY_V2:
+                    byte[] iv = generateAESIV2(ENC_DOMAIN, mAESKey);
+                    aes = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, iv);
+                    break;
+            }
             data = aes.encrypt(data);
         }
         if (data != null) {
@@ -506,7 +528,16 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         if (frameCtrlData.isEncrypted()) {
-            BlufiAES aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+            BlufiAES aes = null;
+            switch (getSecurityVersion()) {
+                case SECURITY_V1:
+                    aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+                    break;
+                case SECURITY_V2:
+                    byte[] iv = generateAESIV2(ENC_DOMAIN, mAESKey);
+                    aes = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, iv);
+                    break;
+            }
             dataBytes = aes.decrypt(dataBytes);
         }
 
