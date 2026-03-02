@@ -194,6 +194,9 @@ class BlufiClientImpl implements BlufiParameter {
         mUserGattCallback = null;
         mContext = null;
         mDevice = null;
+        mAESKey = null;
+        mDecryptorV2 = null;
+        mEncryptorV2 = null;
     }
 
     void setGattWriteTimeout(long timeout) {
