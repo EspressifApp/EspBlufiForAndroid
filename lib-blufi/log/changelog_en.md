@@ -1,7 +1,7 @@
 # Change Log
 [中文](changelog_zh.md)
 
-### 2.5.0
+### 2.5.1
 - Supports device-side BluFi 1.4 encryption.
 
 ### 2.4.1

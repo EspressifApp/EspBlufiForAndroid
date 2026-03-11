@@ -19,6 +19,7 @@ import android.util.Log;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -75,6 +76,9 @@ class BlufiClientImpl implements BlufiParameter {
             "3C1B20EE3FD59D7C25E41D2B66C62E37FFFFFFFFFFFFFFFF";
     private static final String DH_G = "2";
     private static final String AES_TRANSFORMATION = "AES/CFB/NoPadding";
+    private static final String AES_TRANSFORMATION_V2 = "AES/CTR/NoPadding";
+    private static final String ENC_DOMAIN = "blufi_enc";
+    private static final String DEC_DOMAIN = "blufi_dec";
     private static final int SECURITY_V1 = 1;
     private static final int SECURITY_V2 = 2;
 
@@ -104,6 +108,8 @@ class BlufiClientImpl implements BlufiParameter {
     private volatile BlufiNotifyData mNotifyData;
 
     private byte[] mAESKey;
+    private BlufiAES mEncryptorV2;
+    private BlufiAES mDecryptorV2;
 
     private boolean mEncrypted = false;
     private boolean mChecksum = false;
@@ -188,6 +194,9 @@ class BlufiClientImpl implements BlufiParameter {
         mUserGattCallback = null;
         mContext = null;
         mDevice = null;
+        mAESKey = null;
+        mDecryptorV2 = null;
+        mEncryptorV2 = null;
     }
 
     void setGattWriteTimeout(long timeout) {
@@ -320,6 +329,15 @@ class BlufiClientImpl implements BlufiParameter {
         return result;
     }
 
+    private byte[] generateAESIV2(String domain, byte[] key) {
+        ByteArrayOutputStream bytesOS = new ByteArrayOutputStream();
+        byte[] domainBytes = domain.getBytes();
+        bytesOS.write(domainBytes, 0, domainBytes.length);
+        bytesOS.write(key, 0, key.length);
+        byte[] hash = BlufiHash.getSHA256Bytes(bytesOS.toByteArray());
+        return Arrays.copyOfRange(hash, 0, 16);
+    }
+
     private boolean isConnected() {
         return mConnectState == BluetoothGatt.STATE_CONNECTED;
     }
@@ -449,8 +467,16 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         if (encrypt && data != null && data.length > 0) {
-            BlufiAES aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
-            data = aes.encrypt(data);
+            BlufiAES aes = null;
+            switch (getSecurityVersion()) {
+                case SECURITY_V1:
+                    aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+                    data = aes.encrypt(data);
+                    break;
+                case SECURITY_V2:
+                    data = mEncryptorV2.encryptUpdate(data);
+                    break;
+            }
         }
         if (data != null) {
             byteOS.write(data, 0, data.length);
@@ -506,8 +532,16 @@ class BlufiClientImpl implements BlufiParameter {
         }
 
         if (frameCtrlData.isEncrypted()) {
-            BlufiAES aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
-            dataBytes = aes.decrypt(dataBytes);
+            BlufiAES aes = null;
+            switch (getSecurityVersion()) {
+                case SECURITY_V1:
+                    aes = new BlufiAES(mAESKey, AES_TRANSFORMATION, generateAESIV(sequence));
+                    dataBytes = aes.decrypt(dataBytes);
+                    break;
+                case SECURITY_V2:
+                    dataBytes = mDecryptorV2.decryptUpdate(dataBytes);
+                    break;
+            }
         }
 
         if (frameCtrlData.isChecksum()) {
@@ -755,16 +789,21 @@ class BlufiClientImpl implements BlufiParameter {
 
         try {
             espDH.generateSecretKey(devicePublicKey);
-            if (espDH.getSecretKey() == null) {
+            byte[] secretKey = espDH.getSecretKey();
+            if (secretKey == null) {
                 onNegotiateSecurityResult(BlufiCallback.CODE_NEG_ERR_SECURITY);
                 return;
             }
 
             int securityVersion = getSecurityVersion();
             if (securityVersion == SECURITY_V2) {
-                mAESKey = BlufiHash.getSHA256Bytes(espDH.getSecretKey());
+                mAESKey = BlufiHash.getSHA256Bytes(secretKey);
+                byte[] encIV = generateAESIV2(DEC_DOMAIN, secretKey);
+                mEncryptorV2 = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, encIV);
+                byte[] decIV = generateAESIV2(ENC_DOMAIN, secretKey);
+                mDecryptorV2 = new BlufiAES(mAESKey, AES_TRANSFORMATION_V2, decIV);
             } else {
-                mAESKey = BlufiHash.getMD5Bytes(espDH.getSecretKey());
+                mAESKey = BlufiHash.getMD5Bytes(secretKey);
             }
         } catch (Exception e) {
             Log.w(TAG, "__negotiateSecurity: ", e);
